@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateRemarks } from "@/lib/grok";
+import { generateRemarks } from "@/lib/remarks";
 import { generateReportCardPDF, StudentData } from "@/lib/pdfGenerator";
 import { generateFeedbackFormPDF } from "@/lib/feedbackPdf";
 import AdmZip from "adm-zip";
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       // 1. Generate Remark
       let remark = student.remarks;
       if (!remark && student.qualities) {
-        // Fallback or Grok
+        // Remarks Engine
         remark = await generateRemarks(student.qualities, student.name);
       }
       student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";

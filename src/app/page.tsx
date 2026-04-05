@@ -243,7 +243,7 @@ export default function Home() {
               <div className="form-group"><label>Father's Name</label><input type="text" className="form-control" value={manualData.fatherName} onChange={e => setManualData({...manualData, fatherName: e.target.value})} /></div>
               <div className="form-group"><label>Mother's Name</label><input type="text" className="form-control" value={manualData.motherName} onChange={e => setManualData({...manualData, motherName: e.target.value})} /></div>
               <div className="form-group"><label>Date of Birth</label><input type="text" className="form-control" placeholder="DD/MM/YYYY" value={manualData.dob} onChange={e => setManualData({...manualData, dob: e.target.value})} /></div>
-              <div className="form-group"><label>Remark Qualities (AI Generation)</label><input type="text" className="form-control" placeholder="e.g. hard working, struggles in math" value={manualData.qualities} onChange={e => setManualData({...manualData, qualities: e.target.value})} /></div>
+              <div className="form-group"><label>Remark Qualities (Personalized Remark Generation)</label><input type="text" className="form-control" placeholder="e.g. hard working, creative" value={manualData.qualities} onChange={e => setManualData({...manualData, qualities: e.target.value})} /></div>
               <div className="form-group"><label>Working Days</label><input type="number" className="form-control" value={manualData.workingDays} onChange={e => setManualData({...manualData, workingDays: parseInt(e.target.value)})} /></div>
               <div className="form-group"><label>Attended Days</label><input type="number" className="form-control" value={manualData.attendedDays} onChange={e => setManualData({...manualData, attendedDays: parseInt(e.target.value)})} /></div>
             </div>
@@ -306,7 +306,7 @@ export default function Home() {
             )}
             
             <button className="button-primary" onClick={handleGenerate} disabled={loading} style={{width: '100%', padding: '18px', fontSize: '18px', letterSpacing: '1px'}}>
-              {loading ? "⚙️ GROK AI & RENDER ENGINE ACTIVE..." : (showConfirm ? "✅ YES, FINALIZE GENERATION" : "🚀 INITIATE GENERATION SEQUENCE")}
+              {loading ? "⚙️ AI RENDER ENGINE ACTIVE..." : (showConfirm ? "✅ YES, FINALIZE GENERATION" : "🚀 INITIATE GENERATION SEQUENCE")}
             </button>
 
             {resultUrl && (
