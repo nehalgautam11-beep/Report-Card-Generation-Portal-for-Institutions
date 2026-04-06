@@ -351,7 +351,7 @@ export default function Home() {
             </div>
             <div style={{textAlign: 'center'}}>
               <button className="button-secondary" onClick={downloadTemplate}>
-                ⬇️ Download {reportLevel.toUpperCase()} Template
+                Download {reportLevel.toUpperCase()} Template
               </button>
             </div>
           </div>
@@ -378,7 +378,7 @@ export default function Home() {
                 <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2 (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>
               </div>
             ))}
-            {error && <div className="alert error" style={{marginTop: '20px'}}>⚠️ {error}</div>}
+            {error && <div className="alert error" style={{marginTop: '20px'}}>Error: {error}</div>}
             <div style={{textAlign: 'right', marginTop: '20px'}}>
               <button className="button-secondary" onClick={addManualStudent}>+ Add to Queue</button>
             </div>
@@ -417,16 +417,16 @@ export default function Home() {
             </div>
             {showConfirm && (
               <div className="alert" style={{background: '#fff7ed', border: '2px solid #fdba74', color: '#c2410c', marginBottom: '15px'}}>
-                <strong>⚠️ Final Check:</strong> Generating {students.length} report cards for {reportLevel.toUpperCase()}?
-                <button className="button-secondary" style={{marginLeft: '15px'}} onClick={() => setShowConfirm(false)}>Wait, Cancel</button>
+                <strong>Verification Required:</strong> Generating {students.length} report cards for {reportLevel.toUpperCase()}?
+                <button className="button-secondary" style={{marginLeft: '15px'}} onClick={() => setShowConfirm(false)}>Cancel</button>
               </div>
             )}
             <button className="button-primary" onClick={handleGenerate} disabled={loading} style={{width: '100%', padding: '18px', fontSize: '18px'}}>
-              {loading ? "⚙️ GENERATING..." : (showConfirm ? "✅ START BATCH PROCESS" : `🚀 GENERATE ${students.length} REPORTS`)}
+              {loading ? "Processing..." : (showConfirm ? "Finalize Batch Process" : `Generate ${students.length} Reports`)}
             </button>
             {resultUrl && (
               <div style={{marginTop: '20px', textAlign: 'center'}}>
-                <a href={resultUrl} download="report_cards.zip" className="button-primary" style={{background: '#10b981'}}>📥 Download .ZIP Archive</a>
+                <a href={resultUrl} download="report_cards.zip" className="button-primary" style={{background: '#10b981'}}>Download .ZIP Archive</a>
               </div>
             )}
           </div>

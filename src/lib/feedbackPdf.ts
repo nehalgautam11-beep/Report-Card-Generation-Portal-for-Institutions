@@ -3,7 +3,7 @@ import { StudentData } from "./pdfGenerator";
 import fs from "fs";
 import path from "path";
 
-export const generateFeedbackFormPDF = (students: StudentData[]): Promise<Buffer> => {
+export const generateFeedbackFormPDF = (students: StudentData[], logoBuffer?: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       // Landscape A4 setup
@@ -24,10 +24,14 @@ export const generateFeedbackFormPDF = (students: StudentData[]): Promise<Buffer
           doc.addPage();
         }
 
-        // Header section
-        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, 40, 30, { width: 50 });
+        // Header section (Use Buffer if provided for speed)
+        if (logoBuffer) {
+          doc.image(logoBuffer, 40, 30, { width: 50 });
+        } else {
+          const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+          if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 40, 30, { width: 50 });
+          }
         }
         
         doc.font("Helvetica-Bold").fontSize(20).fillColor(PRIMARY_COLOR);

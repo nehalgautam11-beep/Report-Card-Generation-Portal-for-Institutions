@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    // 4. Generate the collective Feedback Form PDF
-    const feedbackPdfBuffer = await generateFeedbackFormPDF(students);
+    // 4. Generate the collective Feedback Form PDF (Now using logo buffer for ultimate speed)
+    const feedbackPdfBuffer = await generateFeedbackFormPDF(students, logoBuffer);
     zip.addFile("Class_Feedback_Form.pdf", feedbackPdfBuffer);
 
     // 5. Generate final zip buffer
