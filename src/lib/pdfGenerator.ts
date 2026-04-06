@@ -51,7 +51,15 @@ export const generateReportCardPDF = (data: StudentData): Promise<Buffer> => {
       // Logo (Load actual image if exists, fallback to box if missing)
       const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
       if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 50, 20, { width: 70 });
+        try {
+          doc.image(logoPath, 50, 20, { width: 70 });
+        } catch (imgError) {
+          console.error("Logo image error:", imgError);
+          // Fallback box if image is corrupt
+          doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
+          doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR);
+          doc.text("GIS LOGO", 50, 50, { width: 70, align: "center" });
+        }
       } else {
         doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
         doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR);

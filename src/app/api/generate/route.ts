@@ -4,6 +4,9 @@ import { generateReportCardPDF, StudentData } from "@/lib/pdfGenerator";
 import { generateFeedbackFormPDF } from "@/lib/feedbackPdf";
 import AdmZip from "adm-zip";
 
+// Increase timeout for serverless function on Vercel
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const { students } = await req.json() as { students: StudentData[] };
@@ -14,8 +17,8 @@ export async function POST(req: NextRequest) {
 
     const zip = new AdmZip();
 
-    // Process each student
-    const processingPromises = students.map(async (student) => {
+    // Process students SEQUENTIALLY to prevent Vercel memory exhaustion and timeouts
+    for (const student of students) {
       // 1. Generate Remark
       let remark = student.remarks;
       if (!remark && student.qualities) {
@@ -30,9 +33,7 @@ export async function POST(req: NextRequest) {
       // 3. Add to ZIP directly
       const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;
       zip.addFile(filename, pdfBuffer);
-    });
-
-    await Promise.all(processingPromises);
+    }
 
     // 4. Generate the collective Feedback Form PDF
     const feedbackPdfBuffer = await generateFeedbackFormPDF(students);
