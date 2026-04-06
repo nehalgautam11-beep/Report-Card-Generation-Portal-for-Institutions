@@ -1,9 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dkgokowix", // Added a default or it needs to be provided
-  api_key: "833257549218487",
-  api_secret: "pjXnOp7gaOp2HRixE9QhvGJw4gQ",
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 export const uploadPDF = (buffer: Buffer, tag: string, filename: string): Promise<string> => {

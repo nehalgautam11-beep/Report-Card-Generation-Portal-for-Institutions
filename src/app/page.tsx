@@ -221,7 +221,7 @@ export default function Home() {
           <div>
             <div className="file-drop-area" onClick={() => document.getElementById('csv-upload')?.click()}>
               <span className="icon">📄</span>
-              <input type="file" accept=".csv" onChange={handleFileUpload} style={{display: 'none'}} id="csv-upload" />
+              <input type="file" accept=".csv, text/csv, application/vnd.ms-excel, application/csv" onChange={handleFileUpload} style={{display: 'none'}} id="csv-upload" />
               <div className="button-secondary" style={{marginBottom: '15px'}}>Browse for CSV File</div>
               <p style={{color: 'var(--text-muted)'}}>
                 {students.length > 0 
