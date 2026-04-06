@@ -233,18 +233,21 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (students.length === 0) return setError("No students to process.");
+    
+    // Initial Confirmation State
     if (!showConfirm) {
       setShowConfirm(true);
       return;
     }
     
+    // Starting the actual process
     setLoading(true);
     setError(null);
     setResultUrl(null);
-    setShowConfirm(false); // Hide confirmation once process starts
-
+    // DO NOT reset showConfirm here - wait for status or error to ensure UI state doesn't 'jump'
+    
     try {
-      console.log("Starting batch generation...");
+      console.log("Initiating generation for:", students.length);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,17 +256,23 @@ export default function Home() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Generation failed. Please check your data and try again.");
+        const msg = data.error || `Server Error (${res.status}: ${res.statusText})`;
+        throw new Error(msg);
       }
       
       const blob = await res.blob();
-      if (blob.size === 0) throw new Error("Generated file is empty.");
+      if (blob.size === 0) throw new Error("Generated file is zero-byte (failed to build archive).");
       
       const url = window.URL.createObjectURL(blob);
       setResultUrl(url);
+      
+      // ONLY now do we reset the confirmation state
+      setShowConfirm(false);
+      console.log("Archive ready and auto-downloading.");
     } catch (err: any) {
-      console.error("Frontend Generation Error:", err);
-      setError(err.message);
+      console.error("Critical Generation Error:", err);
+      // Ensure the error is prominent and doesn't just disappear
+      setError(err.message || "An unexpected error occurred during generation.");
     } finally {
       setLoading(false);
     }
