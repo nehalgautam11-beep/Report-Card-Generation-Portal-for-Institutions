@@ -202,6 +202,7 @@ export default function Home() {
         
         <div className="sidebar-nav">
           <div className="sidebar-nav-item">📚 Dashboard</div>
+          <a href="/api/guide" download="GIS_Portal_User_Guide.pdf" className="sidebar-nav-item" style={{textDecoration: 'none', color: 'inherit'}}>📖 User Guide</a>
           <div className="sidebar-nav-item" style={{opacity: 0.7}}>🎓 Batch Archive</div>
           <div className="sidebar-nav-item" style={{opacity: 0.7}}>⚙️ Settings</div>
         </div>
