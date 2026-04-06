@@ -352,11 +352,50 @@ h2 {
     margin-bottom: 20px;
   }
   
+  .sidebar-nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 5px;
+    margin-top: 20px;
+    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .sidebar-nav-item {
+    margin-bottom: 0;
+    white-space: nowrap;
+    padding: 10px 15px;
+    font-size: 0.85rem;
+  }
+  
   /* Reset input widths for vertical stacking */
   .subject-row > div {
     width: 100%;
     margin-bottom: 5px;
   }
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.button-primary, .button-secondary {
+  min-height: 48px; /* Finger-friendly minimum height */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* Level Selection Dashboard */

@@ -342,11 +342,11 @@ export default function Home() {
             <div className="file-drop-area" onClick={() => document.getElementById('csv-upload')?.click()}>
               <div style={{color: 'var(--primary)', marginBottom: '15px'}}><FileIcon/></div>
               <input type="file" accept=".csv, text/csv, application/vnd.ms-excel, application/csv" onChange={handleFileUpload} style={{display: 'none'}} id="csv-upload" />
-              <div className="button-secondary" style={{marginBottom: '15px'}}>Browse for {reportLevel} CSV</div>
+              <div className="button-secondary" style={{marginBottom: '15px'}}>Tap to Browse {reportLevel} CSV</div>
               <p style={{color: 'var(--text-muted)'}}>
                 {students.length > 0 
                   ? <span style={{color: 'var(--accent-color)', fontWeight: 600}}>✅ {students.length} Student(s) loaded.</span> 
-                  : `Upload your ${reportLevel} CSV to generate batch PDFs.`}
+                  : `Select or drop your ${reportLevel} CSV to begin batch process.`}
               </p>
             </div>
             <div style={{textAlign: 'center'}}>
@@ -388,23 +388,27 @@ export default function Home() {
         {students.length > 0 && (
           <div style={{marginTop: '40px', borderTop: '2px solid var(--border)', paddingTop: '30px'}}>
             <h2 style={{textAlign: 'center', marginBottom: '20px'}}>Queue: {students.length} Profiles</h2>
-            <div style={{background: '#f8fafc', borderRadius: '12px', padding: '15px', marginBottom: '25px', maxHeight: '300px', overflowY: 'auto'}}>
-              <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem'}}>
+            <div className="table-responsive" style={{marginBottom: '25px', maxHeight: '400px'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '600px'}}>
                 <thead>
-                  <tr style={{borderBottom: '2px solid #e2e8f0', textAlign: 'left'}}>
-                    <th style={{padding: '10px'}}>Student</th>
-                    <th style={{padding: '10px'}}>Father</th>
-                    <th style={{padding: '10px', textAlign: 'right'}}>Action</th>
+                  <tr style={{borderBottom: '2px solid #e2e8f0', textAlign: 'left', background: '#f1f5f9'}}>
+                    <th style={{padding: '12px'}}>Student Profile</th>
+                    <th style={{padding: '12px'}}>Guardian Name</th>
+                    <th style={{padding: '12px', textAlign: 'right'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {students.map((st, i) => (
                     <tr key={i} style={{borderBottom: '1px solid #e2e8f0'}}>
-                      <td style={{padding: '10px'}}>{st.name} ({st.className})</td>
-                      <td style={{padding: '10px'}}>{st.fatherName}</td>
-                      <td style={{padding: '10px', textAlign: 'right'}}>
-                        <button style={{color: 'var(--primary)', border: 'none', background: 'none', cursor: 'pointer'}} onClick={() => handleEditStudent(i)}>Edit</button> | 
-                        <button style={{color: 'red', border: 'none', background: 'none', cursor: 'pointer'}} onClick={() => setStudents(students.filter((_, idx) => idx !== i))}>X</button>
+                      <td style={{padding: '12px'}}>
+                        <strong>{st.name}</strong><br/>
+                        <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>{st.className} | {st.dob}</span>
+                      </td>
+                      <td style={{padding: '12px'}}>{st.fatherName}</td>
+                      <td style={{padding: '12px', textAlign: 'right'}}>
+                        <button className="text-secondary" style={{color: 'var(--secondary)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: '5px'}} onClick={() => handleEditStudent(i)}>Edit</button>
+                        <span style={{margin: '0 5px', color: '#cbd5e1'}}>|</span>
+                        <button className="text-danger" style={{color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: '5px'}} onClick={() => setStudents(students.filter((_, idx) => idx !== i))}>Remove</button>
                       </td>
                     </tr>
                   ))}
