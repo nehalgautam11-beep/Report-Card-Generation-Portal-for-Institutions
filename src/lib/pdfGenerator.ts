@@ -32,7 +32,7 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-export const generateReportCardPDF = (data: StudentData): Promise<Buffer> => {
+export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -48,22 +48,23 @@ export const generateReportCardPDF = (data: StudentData): Promise<Buffer> => {
       // Top Background Banner
       doc.rect(0, 0, doc.page.width, 100).fill(BG_LIGHT_BLUE);
 
-      // Logo (Load actual image if exists, fallback to box if missing)
-      const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
-      if (fs.existsSync(logoPath)) {
-        try {
-          doc.image(logoPath, 50, 20, { width: 70 });
-        } catch (imgError) {
-          console.error("Logo image error:", imgError);
-          // Fallback box if image is corrupt
-          doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
-          doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR);
-          doc.text("GIS LOGO", 50, 50, { width: 70, align: "center" });
-        }
+      // Logo (Use Buffer if provided for speed, otherwise read from disk)
+      if (logoBuffer) {
+        doc.image(logoBuffer, 50, 20, { width: 70 });
       } else {
-        doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
-        doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR);
-        doc.text("GIS LOGO", 50, 50, { width: 70, align: "center" });
+        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+        if (fs.existsSync(logoPath)) {
+          try {
+            doc.image(logoPath, 50, 20, { width: 70 });
+          } catch (imgError) {
+            console.error("Logo image error:", imgError);
+            doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
+            doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR).text("GIS LOGO", 50, 50, { width: 70, align: "center" });
+          }
+        } else {
+          doc.rect(50, 20, 70, 70).strokeColor(PRIMARY_COLOR).lineWidth(2).stroke();
+          doc.font("Helvetica-Bold").fontSize(8).fillColor(PRIMARY_COLOR).text("GIS LOGO", 50, 50, { width: 70, align: "center" });
+        }
       }
 
       // School Name Title

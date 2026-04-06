@@ -3,6 +3,8 @@ import { generateRemarks } from "@/lib/remarks";
 import { generateReportCardPDF, StudentData } from "@/lib/pdfGenerator";
 import { generateFeedbackFormPDF } from "@/lib/feedbackPdf";
 import AdmZip from "adm-zip";
+import fs from "fs";
+import path from "path";
 
 // Increase timeout for serverless function on Vercel
 export const maxDuration = 60;
@@ -15,31 +17,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No student data provided" }, { status: 400 });
     }
 
+    // Pre-load logo buffer ONCE to avoid repeated disk reads (Significant performance boost)
+    let logoBuffer: Buffer | undefined;
+    const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+    if (fs.existsSync(logoPath)) {
+      try {
+        logoBuffer = fs.readFileSync(logoPath);
+      } catch (e) {
+        console.error("Failed to pre-load logo:", e);
+      }
+    }
+
     const zip = new AdmZip();
 
-    // Process students SEQUENTIALLY to prevent Vercel memory exhaustion and timeouts
-    for (const student of students) {
-      // 1. Generate Remark
-      let remark = student.remarks;
-      if (!remark && student.qualities) {
-        // Remarks Engine
-        remark = await generateRemarks(student.qualities, student.name);
-      }
-      student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
+    // Process students in chunks of 5 (Optimal balance between speed and memory)
+    const chunkSize = 5;
+    for (let i = 0; i < students.length; i += chunkSize) {
+      const chunk = students.slice(i, i + chunkSize);
+      
+      await Promise.all(chunk.map(async (student) => {
+        // 1. Generate Remark
+        let remark = student.remarks;
+        if (!remark && student.qualities) {
+          remark = await generateRemarks(student.qualities, student.name);
+        }
+        student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
 
-      // 2. Generate PDF
-      const pdfBuffer = await generateReportCardPDF(student);
+        // 2. Generate PDF using pre-loaded buffer
+        const pdfBuffer = await generateReportCardPDF(student, logoBuffer);
 
-      // 3. Add to ZIP directly
-      const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;
-      zip.addFile(filename, pdfBuffer);
+        // 3. Add to ZIP
+        const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;
+        zip.addFile(filename, pdfBuffer);
+      }));
     }
 
     // 4. Generate the collective Feedback Form PDF
     const feedbackPdfBuffer = await generateFeedbackFormPDF(students);
     zip.addFile("Class_Feedback_Form.pdf", feedbackPdfBuffer);
 
-    // 5. Generate local zip buffer
+    // 5. Generate final zip buffer
     const zipBuffer = zip.toBuffer();
 
     return new NextResponse(zipBuffer, {
