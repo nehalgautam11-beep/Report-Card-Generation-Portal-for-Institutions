@@ -10,7 +10,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      const PRIMARY_COLOR = "#f97316";
+      const PRIMARY_COLOR = "#1e3a8a"; // Deep Royal Blue
       const SECONDARY_COLOR = "#334155";
       const TEXT_COLOR = "#475569";
 

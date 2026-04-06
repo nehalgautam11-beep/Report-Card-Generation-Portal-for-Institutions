@@ -12,9 +12,9 @@ export const generateFeedbackFormPDF = (students: StudentData[], logoBuffer?: Bu
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      const PRIMARY_COLOR = "#f97316";
+      const PRIMARY_COLOR = "#1e3a8a"; // Deep Royal Blue
       const SECONDARY_COLOR = "#334155";
-      const BORDER_COLOR = "#cbd5e1";
+      const BORDER_COLOR = "#bfdbfe"; // Light blue border
 
       const maxPerPage = 10;
       let currentIndex = 0;

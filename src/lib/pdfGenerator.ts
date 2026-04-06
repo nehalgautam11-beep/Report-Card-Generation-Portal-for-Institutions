@@ -40,10 +40,9 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      const PRIMARY_COLOR = "#f97316";
+      const PRIMARY_COLOR = "#1e3a8a"; // Deep Royal Blue
       const SECONDARY_COLOR = "#000000";
-      // Exact match for the background of the supplied logo image
-      const BG_LIGHT_BLUE = "#fff7ed";
+      const BG_LIGHT_BLUE = "#eff6ff"; // Soft sky blue background
 
       // Top Background Banner
       doc.rect(0, 0, doc.page.width, 100).fill(BG_LIGHT_BLUE);
