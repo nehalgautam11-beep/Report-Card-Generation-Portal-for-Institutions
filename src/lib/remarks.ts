@@ -54,7 +54,7 @@ export const generateRemarks = async (qualities: string, studentName: string): P
     "Keep up this fantastic momentum as we move into the next academic phase!",
     "Continue to challenge yourself, and you will achieve great heights.",
     "Wishing you continued success and happiness in all your future endeavors.",
-    "Your progress is a testament to your hard work; keep striving for excellence!",
+    "Your progress is a testament to your hard work, keep striving for excellence!",
     "I look forward to seeing you reach even more milestones in the coming months."
   ];
 

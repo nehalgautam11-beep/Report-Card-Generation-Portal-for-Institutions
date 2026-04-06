@@ -48,170 +48,159 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      // ─── EXACT STYLING FROM IMAGE 1 ────────────────────────────────
-      const BLUE_BRAND  = "#1f497d"; // Professional Deep Blue used in Image 1
-      const BLUE_HEADER = "#e3f2fd"; // Light Baby Blue banner
-      const GREEN_ATT   = "#2e7d32"; // Dark Green
+      // ─── STYLING FROM NEW IMAGE ────────────────────────────────────
+      const BLUE_BRAND  = "#1f497d"; 
+      const BLUE_HEADER = "#e3f2fd"; 
+      const GREEN_ATT   = "#2e7d32"; 
       const BLACK       = "#000000";
       const WHITE       = "#ffffff";
       const MARGIN_X    = 45;
       const PAGE_W      = doc.page.width;
 
-      // ─── HEADER SECTION ───────────────────────────────────────────
-      doc.rect(0, 0, PAGE_W, 100).fill(BLUE_HEADER);
+      // ─── HEADER (Condensed) ────────────────────────────────────────
+      doc.rect(0, 0, PAGE_W, 85).fill(BLUE_HEADER);
 
-      // Logo - Clamped for consistency
       if (logoBuffer) {
-        try { doc.image(logoBuffer, MARGIN_X, 15, { width: 75 }); } catch(_) {}
+        try { doc.image(logoBuffer, MARGIN_X, 12, { width: 68 }); } catch(_) {}
       } else {
         const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
         if (fs.existsSync(logoPath)) {
-          try { doc.image(logoPath, MARGIN_X, 15, { width: 75 }); } catch(_) {}
+          try { doc.image(logoPath, MARGIN_X, 12, { width: 68 }); } catch(_) {}
         }
       }
 
-      // School Name
       doc.font("Helvetica-Bold").fontSize(26).fillColor(BLUE_BRAND);
-      doc.text("GLOBAL INNOVATIVE SCHOOL", 140, 38);
+      doc.text("GLOBAL INNOVATIVE SCHOOL", 140, 32);
 
-      // Report Card Title (Centered)
-      doc.font("Helvetica-Bold").fontSize(28).fillColor(BLUE_BRAND); // Slightly larger title
-      doc.text("REPORT CARD", 0, 115, { align: "center", width: PAGE_W });
+      // Title
+      doc.fontSize(18).text("REPORT CARD", 0, 105, { align: "center", width: PAGE_W });
 
-      // ─── STUDENT DETAILS (Casing & Alignment Fix) ──────────────────
-      let y = 145;
+      // ─── STUDENT DETAILS (Aligned Colons, 13pt Font) ─────────────
+      let y = 135;
       const colL = MARGIN_X;
-      const colR = 300;
-      const underlineW = 180;
-      const VAL_OFFSET_Y = 1.8; // Fix entries going above the line
+      const colR = 305;
+      const lineW = 185;
+      const VAL_OFF_Y = 2; // Alignment for line
 
-      const drawDetail = (label: string, value: string, x: number, ly: number) => {
+      const drawDetail = (label: string, value: string, x: number, ly: number, colonX: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND).text(label, x, ly);
-        const labelW = doc.widthOfString(label);
-        // Corrected Casing and Alignment (Shifted down by VAL_OFFSET_Y)
-        doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(toTitleCase(value), x + labelW + 8, ly + VAL_OFFSET_Y);
-        // Underline in BRAND BLUE
-        doc.moveTo(x + labelW + 4, ly + 14).lineTo(x + labelW + underlineW, ly + 14)
-          .strokeColor(BLUE_BRAND).lineWidth(0.8).stroke();
+        doc.text(":", x + colonX, ly);
+        
+        // Value: Bigger (13pt) and sitting on line
+        doc.font("Helvetica").fontSize(13).fillColor(BLACK).text(toTitleCase(value), x + colonX + 12, ly - 1);
+        
+        doc.moveTo(x + colonX + 10, ly + 14).lineTo(x + colonX + lineW, ly + 14)
+          .strokeColor("#cccccc").lineWidth(0.8).stroke();
       };
 
-      drawDetail("NAME:", data.name, colL, y);
-      drawDetail("Mother's Name:", data.motherName, colR, y);
-      y += 28;
-      drawDetail("CLASS:", data.className, colL, y);
-      drawDetail("Father's Name:", data.fatherName, colR, y);
-      y += 28;
-      drawDetail("DOB:", data.dob, colL, y);
+      drawDetail("NAME", data.name, colL, y, 65);
+      drawDetail("Mother's Name:", data.motherName, colR, y, 95);
+      y += 26;
+      drawDetail("CLASS", data.className, colL, y, 65);
+      drawDetail("Father's Name:", data.fatherName, colR, y, 95);
+      y += 26;
+      drawDetail("DOB", data.dob, colL, y, 65);
 
-      y += 40;
+      y += 38;
 
-      // ─── SUBJECT TABLE ───────────────────────────────────────────
+      // ─── TABLE ─────────────────────────────────────────────────────
       const tableX = MARGIN_X;
       const tableW = PAGE_W - MARGIN_X * 2;
-      const colW   = [110, 110, 110, 100, 75]; 
-      const xPos   = [0, 110, 220, 330, 430].map(v => v + tableX);
+      const colPos = [0, 110, 215, 325, 425].map(v => v + tableX);
 
-      const headH = 34;
-      doc.rect(tableX, y, tableW, headH).fill(BLUE_HEADER);
-      doc.rect(tableX, y, tableW, headH).strokeColor(BLUE_BRAND).stroke();
-      
-      for (let i = 1; i < xPos.length; i++) {
-        doc.moveTo(xPos[i], y).lineTo(xPos[i], y + headH).stroke();
+      const hH = 40;
+      doc.rect(tableX, y, tableW, hH).fill(WHITE).strokeColor(BLUE_BRAND).stroke();
+      for (let i = 1; i < colPos.length; i++) {
+        doc.moveTo(colPos[i], y).lineTo(colPos[i], y + hH).stroke();
       }
 
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(BLUE_BRAND);
-      doc.text("Subject", tableX + 5, y + 12);
-      doc.text("Periodic Test - 2\n(Out of 10)", xPos[1] + 5, y + 6);
-      doc.text("Subject Enrichment\n(Out of 10)", xPos[2] + 5, y + 6);
-      doc.text("Term - 2 Examination\n(Out of 80)", xPos[3] + 5, y + 6);
-      doc.text("Overall Marks\n(Out of 100)", xPos[4] + 5, y + 6);
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(BLACK);
+      doc.text("Subject", tableX + 5, y + 15);
+      doc.text("Periodic Test - 2\n(Out of 10)", colPos[1] + 5, y + 8, { width: 95 });
+      doc.text("Subject Enrichment\n(Out of 10)", colPos[2] + 5, y + 8, { width: 95 });
+      doc.text("Term - 2 Examination\n(Out of 80)", colPos[3] + 5, y + 8, { width: 95 });
+      doc.text("Overall Marks\n(Out of 100)", colPos[4] + 5, y + 8, { width: 75 });
 
-      y += headH;
-      let totalMarksAccumulated = 0;
+      y += hH;
+      let totalAccum = 0;
 
-      data.subjects.forEach(subject => {
-        // SCALING LOGIC: Scale out of 20 to 10
-        const rawP = Number(subject.marks.periodicRaw) || 0;
-        const p = Math.round(rawP / 2); // Scales down to 10 and rounds (e.g., 15->8)
-        
-        const e = Number(subject.marks.enrichment) || 0;
-        const t = Number(subject.marks.term2) || 0;
+      data.subjects.forEach(st => {
+        const pRaw = Number(st.marks.periodicRaw) || 0;
+        const p = Math.round(pRaw / 2); // 20 -> 10
+        const e = Number(st.marks.enrichment) || 0;
+        const t = Number(st.marks.term2) || 0;
         const sum = p + e + t;
-        totalMarksAccumulated += sum;
+        totalAccum += sum;
 
-        doc.rect(tableX, y, tableW, 26).strokeColor(BLUE_BRAND).stroke();
-        for (let i = 1; i < xPos.length; i++) {
-          doc.moveTo(xPos[i], y).lineTo(xPos[i], y + 26).stroke();
+        doc.rect(tableX, y, tableW, 28).strokeColor(BLUE_BRAND).stroke();
+        for (let i = 1; i < colPos.length; i++) {
+          doc.moveTo(colPos[i], y).lineTo(colPos[i], y + 28).stroke();
         }
 
-        doc.font("Helvetica-Bold").fontSize(10.5).fillColor(BLACK).text(subject.name, tableX + 5, y + 7.5);
-        doc.font("Helvetica").fontSize(11).text(p.toString(), xPos[1] + 5, y + 7.5);
-        doc.text(e.toString(), xPos[2] + 5, y + 7.5);
-        doc.text(t.toString(), xPos[3] + 5, y + 7.5);
-        doc.text(sum.toString(), xPos[4] + 5, y + 7.5);
-        y += 26;
+        doc.font("Helvetica-Bold").fontSize(11).fillColor(BLACK).text(st.name, tableX + 8, y + 8);
+        doc.font("Helvetica").fontSize(12).text(p.toString(), colPos[1] + 8, y + 8);
+        doc.text(e.toString(), colPos[2] + 8, y + 8);
+        doc.text(t.toString(), colPos[3] + 8, y + 8);
+        doc.text(sum.toString(), colPos[4] + 8, y + 8);
+        y += 28;
       });
 
       y += 24;
 
-      // ─── STATS & ATTENDANCE (Alignment Fix) ───────────────────────
-      const totalPossible = data.subjects.length * 100;
-      const percentage    = totalPossible > 0 ? (totalMarksAccumulated / totalPossible) * 100 : 0;
-      const grade         = getGrade(percentage);
+      // ─── STATS & ATTENDANCE (Condensed) ───────────────────────────
+      const tPoss = data.subjects.length * 100;
+      const perc  = tPoss > 0 ? (totalAccum / tPoss) * 100 : 0;
+      const grad  = getGrade(perc);
 
-      const drawStat = (label: string, value: string, sy: number) => {
-        doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND).text(label, MARGIN_X, sy);
-        doc.font("Helvetica").fillColor(BLACK).text(value, MARGIN_X + 130, sy + VAL_OFFSET_Y);
-        doc.moveTo(MARGIN_X + 125, sy + 14).lineTo(MARGIN_X + 260, sy + 14).strokeColor(BLUE_BRAND).stroke();
+      const drawS = (label: string, value: string, sy: number) => {
+        doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE_BRAND).text(label, MARGIN_X, sy);
+        doc.font("Helvetica").fontSize(12).fillColor(BLACK).text(value, MARGIN_X + 135, sy + 1);
+        doc.moveTo(MARGIN_X + 130, sy + 14).lineTo(MARGIN_X + 270, sy + 14).strokeColor(BLUE_BRAND).stroke();
       };
 
-      drawStat("Overall Marks:", `${totalMarksAccumulated} / ${totalPossible}`, y);
-      drawStat("Overall Percentage:", `${percentage.toFixed(2)}%`, y + 26);
-      drawStat("Overall Grade:", grade, y + 52);
+      drawS("Overall Marks:", `${totalAccum} / ${tPoss}`, y);
+      drawS("Overall Percentage:", `${perc.toFixed(2)}%`, y + 28);
+      drawS("Overall Grade:", grad, y + 56);
 
-      const attX = 330;
-      const attW = PAGE_W - MARGIN_X - attX;
-      doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND);
-      doc.text("Attendance", attX, y, { width: attW, align: "center" });
+      const aX = 330;
+      const aW = PAGE_W - MARGIN_X - aX;
+      doc.font("Helvetica-Bold").fontSize(12).fillColor(BLUE_BRAND).text("Attendance", aX, y, { width: aW, align: "center" });
       y += 18;
 
-      const drawAtt = (label: string, val: string, ry: number, isLast = false) => {
-        doc.rect(attX, ry, attW, 24).strokeColor(BLUE_BRAND).stroke();
-        doc.moveTo(attX + 140, ry).lineTo(attX + 140, ry + 24).stroke();
-        doc.font("Helvetica-Bold").fontSize(9).fillColor(GREEN_ATT).text(label, attX + 5, ry + 7);
-        doc.font("Helvetica-Bold").fontSize(10).fillColor(isLast ? BLUE_BRAND : BLACK).text(val, attX + 148, ry + 7 + VAL_OFFSET_Y);
+      const drawA = (label: string, val: string, ry: number) => {
+        doc.rect(aX, ry, aW, 25).strokeColor(BLUE_BRAND).stroke();
+        doc.moveTo(aX + 140, ry).lineTo(aX + 140, ry + 25).stroke();
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(GREEN_ATT).text(label, aX + 8, ry + 8);
+        doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(val, aX + 155, ry + 8);
       };
 
-      drawAtt("Total Working Days", data.workingDays.toString(), y);
-      drawAtt("Number of Days Attended", data.attendedDays.toString(), y + 24);
-      const attPer = data.workingDays > 0 ? ((data.attendedDays / data.workingDays) * 100).toFixed(2) : "0.00";
-      drawAtt("Attendance Percentage", `${attPer}%`, y + 48, true);
+      drawA("Total Working Days", data.workingDays.toString(), y);
+      drawA("Number of Days Attended", data.attendedDays.toString(), y + 25);
 
-      y += 100;
+      y += 95;
 
-      // ─── BOTTOM SECTION ───────────────────────────────────────────
-      doc.rect(0, y - 10, PAGE_W, 300).fill(BLUE_HEADER);
-
-      const boxH = 100;
-      doc.rect(MARGIN_X, y, tableW, boxH).fill(WHITE).strokeColor(BLUE_HEADER).stroke();
-      doc.font("Helvetica-Bold").fontSize(10.5).fillColor(BLUE_BRAND).text("Teacher's Remark:", MARGIN_X + 10, y + 10);
+      // ─── FOOTER (New Style) ────────────────────────────────────────
+      doc.rect(0, y, PAGE_W, 400).fill(BLUE_HEADER);
+      
+      const bH = 95;
+      doc.rect(MARGIN_X, y + 15, PAGE_W - MARGIN_X * 2, bH).fill(WHITE).strokeColor(BLUE_HEADER).stroke();
+      doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND).text("Teacher's Remark:", MARGIN_X + 12, y + 25);
       if (data.remarks) {
-        doc.font("Helvetica").fontSize(10).fillColor(BLACK);
-        doc.text(data.remarks, MARGIN_X + 10, y + 28, { width: 485, lineGap: 5 });
+        doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(data.remarks, MARGIN_X + 12, y + 42, { width: 480, lineGap: 5 });
       }
 
-      y += boxH + 60;
+      y += bH + 65;
 
-      // Lines
-      const lineL = 145;
+      // Lines and Labels (BLUE TEXT AS PER NEW IMAGE)
+      const sW = 160;
       doc.strokeColor(BLUE_BRAND).lineWidth(1.2);
-      doc.moveTo(MARGIN_X, y).lineTo(MARGIN_X + lineL, y).stroke();
-      doc.moveTo(PAGE_W - MARGIN_X - lineL, y).lineTo(PAGE_W - MARGIN_X, y).stroke();
+      doc.moveTo(MARGIN_X, y).lineTo(MARGIN_X + sW, y).stroke();
+      doc.moveTo(PAGE_W - MARGIN_X - sW, y).lineTo(PAGE_W - MARGIN_X, y).stroke();
 
-      doc.font("Helvetica").fontSize(10).fillColor(BLACK);
-      doc.text("Class Teacher", MARGIN_X, y + 10, { width: lineL, align: "center" });
-      doc.text("School Stamp", 0, y + 10, { width: PAGE_W, align: "center" });
-      doc.text("Principal", PAGE_W - MARGIN_X - lineL, y + 10, { width: lineL, align: "center" });
+      doc.fontSize(12).fillColor(BLUE_BRAND);
+      doc.text("Class Teacher", MARGIN_X, y + 8, { width: sW, align: "center" });
+      doc.text("School Stamp", 0, y + 8, { width: PAGE_W, align: "center" });
+      doc.text("Principal", PAGE_W - MARGIN_X - sW, y + 8, { width: sW, align: "center" });
 
       doc.end();
     } catch (e) {
