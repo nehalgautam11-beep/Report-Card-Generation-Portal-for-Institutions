@@ -138,9 +138,9 @@ export default function Home() {
             const studentSubjects = subjects.map(sub => ({
               name: sub,
               marks: {
-                periodicRaw: parseInt(row[`${sub} Periodic`] || "0", 10),
-                enrichment: parseInt(row[`${sub} Enrichment`] || "0", 10),
-                term2: parseInt(row[`${sub} Term2`] || "0", 10)
+                periodicRaw: parseInt(row[`${sub} Periodic`] || "0", 10) || 0,
+                enrichment: parseInt(row[`${sub} Enrichment`] || "0", 10) || 0,
+                term2: parseInt(row[`${sub} Term2`] || "0", 10) || 0
               }
             }));
 
@@ -151,8 +151,8 @@ export default function Home() {
               className: row.Class || "",
               dob: row.DOB || "",
               qualities: row["Remarks Qualities"] || "",
-              workingDays: parseInt(row["Working Days"] || "0", 10),
-              attendedDays: parseInt(row["Attended Days"] || "0", 10),
+              workingDays: parseInt(row["Working Days"] || "0", 10) || 0,
+              attendedDays: parseInt(row["Attended Days"] || "0", 10) || 0,
               subjects: studentSubjects
             };
           });
@@ -197,13 +197,15 @@ export default function Home() {
 
     const s = {
       name: manualData.name, fatherName: manualData.fatherName, motherName: manualData.motherName, className: manualData.className,
-      dob: manualData.dob, qualities: manualData.qualities, workingDays: manualData.workingDays, attendedDays: manualData.attendedDays,
+      dob: manualData.dob, qualities: manualData.qualities,
+      workingDays: Number(manualData.workingDays) || 0,
+      attendedDays: Number(manualData.attendedDays) || 0,
       subjects: subjects.map(sub => ({
         name: sub,
         marks: {
-          periodicRaw: manualData[`${sub}_P`],
-          enrichment: manualData[`${sub}_E`],
-          term2: manualData[`${sub}_T`]
+          periodicRaw: Number(manualData[`${sub}_P`]) || 0,
+          enrichment: Number(manualData[`${sub}_E`]) || 0,
+          term2: Number(manualData[`${sub}_T`]) || 0
         }
       }))
     };

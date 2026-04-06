@@ -123,16 +123,21 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       let subjectCount = 0;
 
       const drawSubjectRow = (label: string, marks: SubjectMarks) => {
-        const p10 = Math.round((marks.periodicRaw / 20) * 10); // scale to 10 and round
-        const overall = p10 + marks.enrichment + marks.term2;
+        // Safe parsing - ensure all values are valid numbers (never null/undefined/NaN)
+        const rawPeriodic = Number(marks.periodicRaw) || 0;
+        const rawEnrichment = Number(marks.enrichment) || 0;
+        const rawTerm2 = Number(marks.term2) || 0;
+
+        const p10 = Math.round((rawPeriodic / 20) * 10); // scale to 10 and round
+        const overall = p10 + rawEnrichment + rawTerm2;
         totalGrand += overall;
         subjectCount++;
 
         doc.rect(startX, y, 500, subjectRowHeight).strokeColor(PRIMARY_COLOR).stroke();
         doc.font("Helvetica-Bold").fontSize(10).fillColor(SECONDARY_COLOR).text(label, startX + 5, y + 7);
         doc.font("Helvetica").fontSize(12).text(p10.toString(), colX1 + 5, y + 7);
-        doc.text(marks.enrichment.toString(), colX2 + 5, y + 7);
-        doc.text(marks.term2.toString(), colX3 + 5, y + 7);
+        doc.text(rawEnrichment.toString(), colX2 + 5, y + 7);
+        doc.text(rawTerm2.toString(), colX3 + 5, y + 7);
         doc.text(overall.toString(), colX4 + 5, y + 7);
         
         y += subjectRowHeight;
