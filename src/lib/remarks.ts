@@ -1,4 +1,6 @@
 export const generateRemarks = async (qualities: string, studentName: string): Promise<string> => {
+  // Use only the first name for a more personal and friendly remark
+  const firstName = studentName.trim().split(" ")[0] || studentName;
   const cleanQualities = qualities
     .split(",")
     .map((q) => q.trim())
@@ -6,14 +8,14 @@ export const generateRemarks = async (qualities: string, studentName: string): P
 
   // Positive sentence openers
   const openers = [
-    `${studentName}, you have exhibited an excellent attitude towards learning this term.`,
-    `It is truly a pleasure to witness your growth in the classroom, ${studentName}.`,
-    `You are a standout student with a bright future ahead of you, ${studentName}.`,
-    `${studentName}, your enthusiasm and commitment to your studies are highly commendable.`,
-    `You consistently contribute a positive energy to our school community, ${studentName}.`,
-    `${studentName}, I am very proud of the maturity and dedication you've shown recently.`,
-    `Your active participation and curious mind make you a joy to teach, ${studentName}.`,
-    `${studentName}, you have established a strong foundation for yourself through your hard work.`
+    `${firstName}, you have exhibited an excellent attitude towards learning this term.`,
+    `It is truly a pleasure to witness your growth in the classroom, ${firstName}.`,
+    `You are a standout student with a bright future ahead of you, ${firstName}.`,
+    `${firstName}, your enthusiasm and commitment to your studies are highly commendable.`,
+    `You consistently contribute a positive energy to our school community, ${firstName}.`,
+    `${firstName}, I am very proud of the maturity and dedication you've shown recently.`,
+    `Your active participation and curious mind make you a joy to teach, ${firstName}.`,
+    `${firstName}, you have established a strong foundation for yourself through your hard work.`
   ];
 
   // Specific trait-based sentences (Second Person)
@@ -57,20 +59,20 @@ export const generateRemarks = async (qualities: string, studentName: string): P
   ];
 
   // Logic to build a unique remark
-  const opener = openers[Math.abs(studentName.length + (cleanQualities[0]?.length || 0)) % openers.length];
+  const opener = openers[Math.abs(firstName.length + (cleanQualities[0]?.length || 0)) % openers.length];
   
   // Try to find a trait-specific sentence
   let traitSentence = "";
   const foundTrait = cleanQualities.find(q => traitTemplates[q.toLowerCase()]);
   if (foundTrait) {
     const options = traitTemplates[foundTrait.toLowerCase()];
-    traitSentence = options[studentName.length % options.length];
+    traitSentence = options[firstName.length % options.length];
   } else {
     const options = traitTemplates.default;
-    traitSentence = options[studentName.length % options.length];
+    traitSentence = options[firstName.length % options.length];
   }
 
-  const closer = closingSentences[Math.abs(studentName.length - cleanQualities.length) % closingSentences.length];
+  const closer = closingSentences[Math.abs(firstName.length - cleanQualities.length) % closingSentences.length];
 
   return `${opener} ${traitSentence} ${closer}`;
 };
