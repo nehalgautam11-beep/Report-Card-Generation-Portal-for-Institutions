@@ -112,6 +112,18 @@ export default function Home() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [students]);
 
+  // Auto-download ZIP when generation is complete
+  useEffect(() => {
+    if (resultUrl) {
+      const link = document.createElement("a");
+      link.href = resultUrl;
+      link.setAttribute("download", `GIS_Report_Cards_${new Date().getTime()}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }, [resultUrl]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !reportLevel) return;
@@ -229,21 +241,28 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResultUrl(null);
+    setShowConfirm(false); // Hide confirmation once process starts
+
     try {
+      console.log("Starting batch generation...");
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ students }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Generation failed on the server.");
+        throw new Error(data.error || "Generation failed. Please check your data and try again.");
       }
       
       const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Generated file is empty.");
+      
       const url = window.URL.createObjectURL(blob);
       setResultUrl(url);
     } catch (err: any) {
+      console.error("Frontend Generation Error:", err);
       setError(err.message);
     } finally {
       setLoading(false);

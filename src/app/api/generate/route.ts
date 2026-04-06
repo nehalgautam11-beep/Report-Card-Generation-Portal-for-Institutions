@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No student data provided" }, { status: 400 });
     }
 
-    // Pre-load logo buffer ONCE to avoid repeated disk reads (Significant performance boost)
+    // Pre-load logo buffer ONCE
     let logoBuffer: Buffer | undefined;
     const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
     if (fs.existsSync(logoPath)) {
@@ -30,36 +30,34 @@ export async function POST(req: NextRequest) {
 
     const zip = new AdmZip();
 
-    // Process students in chunks of 5 (Optimal balance between speed and memory)
-    const chunkSize = 5;
-    for (let i = 0; i < students.length; i += chunkSize) {
-      const chunk = students.slice(i, i + chunkSize);
-      
-      await Promise.all(chunk.map(async (student) => {
-        // 1. Generate Remark
-        let remark = student.remarks;
-        if (!remark && student.qualities) {
-          remark = await generateRemarks(student.qualities, student.name);
-        }
-        student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
+    // Process students SEQUENTIALLY (1000% safe memory and zero race conditions)
+    console.log(`Starting generation for ${students.length} students...`);
+    for (const student of students) {
+      // 1. Generate Remark
+      let remark = student.remarks;
+      if (!remark && student.qualities) {
+        remark = await generateRemarks(student.qualities, student.name);
+      }
+      student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
 
-        // 2. Generate PDF using pre-loaded buffer
-        const pdfBuffer = await generateReportCardPDF(student, logoBuffer);
+      // 2. Generate PDF
+      const pdfBuffer = await generateReportCardPDF(student, logoBuffer);
 
-        // 3. Add to ZIP
-        const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;
-        zip.addFile(filename, pdfBuffer);
-      }));
+      // 3. Add to ZIP
+      const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;
+      zip.addFile(filename, pdfBuffer);
     }
 
-    // 4. Generate the collective Feedback Form PDF (Now using logo buffer for ultimate speed)
+    // 4. Generate the collective Feedback Form PDF
     const feedbackPdfBuffer = await generateFeedbackFormPDF(students, logoBuffer);
     zip.addFile("Class_Feedback_Form.pdf", feedbackPdfBuffer);
 
-    // 5. Generate final zip buffer
+    // 5. Generate final zip buffer and convert to safe TypedArray
     const zipBuffer = zip.toBuffer();
+    const finalUint8Array = new Uint8Array(zipBuffer);
 
-    return new NextResponse(zipBuffer, {
+    console.log("Generation complete. Sending ZIP...");
+    return new NextResponse(finalUint8Array, {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
