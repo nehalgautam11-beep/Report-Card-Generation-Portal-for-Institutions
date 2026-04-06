@@ -360,3 +360,85 @@ h2 {
     margin-bottom: 5px;
   }
 }
+
+/* Level Selection Dashboard */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+@media screen and (max-width: 768px) {
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.level-card {
+  background: white;
+  border: 2px solid #fed7aa;
+  border-radius: 24px;
+  padding: 40px 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.level-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--primary);
+  box-shadow: 0 20px 25px -5px rgba(249, 115, 22, 0.1);
+}
+
+.level-card h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.5rem;
+  margin: 0 0 10px;
+  color: var(--text-main);
+}
+
+.level-card p {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+[card-level="pre-primary"]:hover { background: #fffcf0; }
+[card-level="primary"]:hover { background: #f0fdf4; }
+[card-level="middle"]:hover { background: #f0f9ff; }
+
+.icon-container {
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+}
+
+.level-card:hover .icon-container {
+  transform: scale(1.1);
+}
+
+.sidebar-nav-item {
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav-item.clickable {
+  cursor: pointer;
+}
+
+.sidebar-nav-item.clickable:hover {
+  background: rgba(255,255,255,0.3);
+  padding-left: 25px;
+}
+
+.sidebar-nav-item svg {
+  flex-shrink: 0;
+}
+
+.sidebar-nav-item.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
