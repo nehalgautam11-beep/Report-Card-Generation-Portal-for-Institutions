@@ -8,6 +8,9 @@
   --text-main: #334155;
   --text-muted: #64748b;
   --border: #fed7aa;
+  --font-poppins: "Trebuchet MS", "Avenir Next", "Segoe UI", Arial, sans-serif;
+  --font-nunito: "Avenir Next", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-geist-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {

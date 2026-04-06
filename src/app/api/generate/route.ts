@@ -9,9 +9,13 @@ import path from "path";
 // Increase timeout for serverless function on Vercel
 export const maxDuration = 60;
 
+interface StudentPayload extends StudentData {
+  qualities?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { students } = await req.json() as { students: StudentData[] };
+    const { students } = await req.json() as { students: StudentPayload[] };
 
     if (!students || students.length === 0) {
       return NextResponse.json({ error: "No student data provided" }, { status: 400 });
