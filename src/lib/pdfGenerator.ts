@@ -32,6 +32,14 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
+const toTitleCase = (str: string): string => {
+  return (str || "")
+    .toLowerCase()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
@@ -67,20 +75,21 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.text("GLOBAL INNOVATIVE SCHOOL", 140, 38);
 
       // Report Card Title (Centered)
-      doc.font("Helvetica-Bold").fontSize(18).fillColor(BLUE_BRAND);
+      doc.font("Helvetica-Bold").fontSize(28).fillColor(BLUE_BRAND); // Slightly larger title
       doc.text("REPORT CARD", 0, 115, { align: "center", width: PAGE_W });
 
-      // ─── STUDENT DETAILS (Matching Image Grid & Fonst) ────────────
+      // ─── STUDENT DETAILS (Casing & Alignment Fix) ──────────────────
       let y = 145;
       const colL = MARGIN_X;
       const colR = 300;
       const underlineW = 180;
+      const VAL_OFFSET_Y = 1.8; // Fix entries going above the line
 
       const drawDetail = (label: string, value: string, x: number, ly: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND).text(label, x, ly);
         const labelW = doc.widthOfString(label);
-        // VALUE IS REGULAR FONT (MATCHING IMAGE 1)
-        doc.font("Helvetica").fontSize(11).fillColor(BLACK).text((value || "").toUpperCase(), x + labelW + 8, ly);
+        // Corrected Casing and Alignment (Shifted down by VAL_OFFSET_Y)
+        doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(toTitleCase(value), x + labelW + 8, ly + VAL_OFFSET_Y);
         // Underline in BRAND BLUE
         doc.moveTo(x + labelW + 4, ly + 14).lineTo(x + labelW + underlineW, ly + 14)
           .strokeColor(BLUE_BRAND).lineWidth(0.8).stroke();
@@ -121,7 +130,10 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       let totalMarksAccumulated = 0;
 
       data.subjects.forEach(subject => {
-        const p = Number(subject.marks.periodicRaw) || 0;
+        // SCALING LOGIC: Scale out of 20 to 10
+        const rawP = Number(subject.marks.periodicRaw) || 0;
+        const p = Math.round(rawP / 2); // Scales down to 10 and rounds (e.g., 15->8)
+        
         const e = Number(subject.marks.enrichment) || 0;
         const t = Number(subject.marks.term2) || 0;
         const sum = p + e + t;
@@ -132,24 +144,24 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
           doc.moveTo(xPos[i], y).lineTo(xPos[i], y + 26).stroke();
         }
 
-        doc.font("Helvetica-Bold").fontSize(10.5).fillColor(BLACK).text(subject.name, tableX + 5, y + 7);
-        doc.font("Helvetica").fontSize(11).text(p.toString(), xPos[1] + 5, y + 7);
-        doc.text(e.toString(), xPos[2] + 5, y + 7);
-        doc.text(t.toString(), xPos[3] + 5, y + 7);
-        doc.text(sum.toString(), xPos[4] + 5, y + 7);
+        doc.font("Helvetica-Bold").fontSize(10.5).fillColor(BLACK).text(subject.name, tableX + 5, y + 7.5);
+        doc.font("Helvetica").fontSize(11).text(p.toString(), xPos[1] + 5, y + 7.5);
+        doc.text(e.toString(), xPos[2] + 5, y + 7.5);
+        doc.text(t.toString(), xPos[3] + 5, y + 7.5);
+        doc.text(sum.toString(), xPos[4] + 5, y + 7.5);
         y += 26;
       });
 
       y += 24;
 
-      // ─── STATS & ATTENDANCE ───────────────────────────────────────
+      // ─── STATS & ATTENDANCE (Alignment Fix) ───────────────────────
       const totalPossible = data.subjects.length * 100;
       const percentage    = totalPossible > 0 ? (totalMarksAccumulated / totalPossible) * 100 : 0;
       const grade         = getGrade(percentage);
 
       const drawStat = (label: string, value: string, sy: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(BLUE_BRAND).text(label, MARGIN_X, sy);
-        doc.font("Helvetica").fillColor(BLACK).text(value, MARGIN_X + 130, sy);
+        doc.font("Helvetica").fillColor(BLACK).text(value, MARGIN_X + 130, sy + VAL_OFFSET_Y);
         doc.moveTo(MARGIN_X + 125, sy + 14).lineTo(MARGIN_X + 260, sy + 14).strokeColor(BLUE_BRAND).stroke();
       };
 
@@ -165,9 +177,9 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
 
       const drawAtt = (label: string, val: string, ry: number, isLast = false) => {
         doc.rect(attX, ry, attW, 24).strokeColor(BLUE_BRAND).stroke();
-        doc.moveTo(attX + 155, ry).lineTo(attX + 155, ry + 24).stroke();
+        doc.moveTo(attX + 140, ry).lineTo(attX + 140, ry + 24).stroke();
         doc.font("Helvetica-Bold").fontSize(9).fillColor(GREEN_ATT).text(label, attX + 5, ry + 7);
-        doc.font("Helvetica-Bold").fontSize(10).fillColor(isLast ? BLUE_BRAND : BLACK).text(val, attX + 165, ry + 7);
+        doc.font("Helvetica-Bold").fontSize(10).fillColor(isLast ? BLUE_BRAND : BLACK).text(val, attX + 148, ry + 7 + VAL_OFFSET_Y);
       };
 
       drawAtt("Total Working Days", data.workingDays.toString(), y);
@@ -178,7 +190,7 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       y += 100;
 
       // ─── BOTTOM SECTION ───────────────────────────────────────────
-      doc.rect(0, y - 10, PAGE_W, PAGE_W).fill(BLUE_HEADER);
+      doc.rect(0, y - 10, PAGE_W, 300).fill(BLUE_HEADER);
 
       const boxH = 100;
       doc.rect(MARGIN_X, y, tableW, boxH).fill(WHITE).strokeColor(BLUE_HEADER).stroke();
@@ -197,9 +209,9 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.moveTo(PAGE_W - MARGIN_X - lineL, y).lineTo(PAGE_W - MARGIN_X, y).stroke();
 
       doc.font("Helvetica").fontSize(10).fillColor(BLACK);
-      doc.text("Class Teacher", MARGIN_X, y + 8, { width: lineL, align: "center" });
-      doc.text("School Stamp", 0, y + 8, { width: PAGE_W, align: "center" });
-      doc.text("Principal", PAGE_W - MARGIN_X - lineL, y + 8, { width: lineL, align: "center" });
+      doc.text("Class Teacher", MARGIN_X, y + 10, { width: lineL, align: "center" });
+      doc.text("School Stamp", 0, y + 10, { width: PAGE_W, align: "center" });
+      doc.text("Principal", PAGE_W - MARGIN_X - lineL, y + 10, { width: lineL, align: "center" });
 
       doc.end();
     } catch (e) {
