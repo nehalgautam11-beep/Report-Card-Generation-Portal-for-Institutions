@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { StudentData } from "./pdfGenerator";
+import type { StudentData } from "./pdfGenerator";
 import fs from "fs";
 import path from "path";
 

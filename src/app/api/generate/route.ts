@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRemarks } from "@/lib/remarks";
-import { generateReportCardPDF, StudentData } from "@/lib/pdfGenerator";
+import { generateReportCardPDF, type ReportLevel, type StudentData } from "@/lib/pdfGenerator";
 import { generateFeedbackFormPDF } from "@/lib/feedbackPdf";
 import AdmZip from "adm-zip";
 import fs from "fs";
@@ -15,7 +15,10 @@ interface StudentPayload extends StudentData {
 
 export async function POST(req: NextRequest) {
   try {
-    const { students } = await req.json() as { students: StudentPayload[] };
+    const { students, reportLevel } = await req.json() as {
+      students: StudentPayload[];
+      reportLevel?: ReportLevel;
+    };
 
     if (!students || students.length === 0) {
       return NextResponse.json({ error: "No student data provided" }, { status: 400 });
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
       student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
 
       // 2. Generate PDF
-      const pdfBuffer = await generateReportCardPDF(student, logoBuffer);
+      const pdfBuffer = await generateReportCardPDF(student, logoBuffer, reportLevel);
 
       // 3. Add to ZIP
       const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;

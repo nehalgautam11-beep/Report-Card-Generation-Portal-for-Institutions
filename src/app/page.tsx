@@ -6,7 +6,7 @@ import Papa from "papaparse";
 type ReportLevel = "pre-primary" | "primary" | "middle";
 
 const LEVEL_CONFIG = {
-  "pre-primary": ["English", "Hindi", "Maths", "E.V.S."],
+  "pre-primary": ["English", "Hindi", "Maths", "E.V.S.", "Drawing + G.K."],
   "primary": ["English", "Hindi", "Maths", "E.V.S.", "Computer + G.K."],
   "middle": ["English", "Hindi", "Maths", "E.V.S.", "Computer + G.K.", "Social Science", "Sanskrit"],
 };
@@ -253,7 +253,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ students }),
+        body: JSON.stringify({ students, reportLevel }),
       });
 
       if (!res.ok) {
@@ -318,7 +318,7 @@ export default function Home() {
               <div card-level="pre-primary" className="level-card" onClick={() => setReportLevel('pre-primary')}>
                 <div className="icon-container" style={{color: '#f59e0b'}}><PrePrimaryIcon/></div>
                 <h3>Pre-Primary</h3>
-                <p>4 Subjects Grid (Out of 400)</p>
+                <p>5 Subjects Grid (Out of 500)</p>
               </div>
               <div card-level="primary" className="level-card" onClick={() => setReportLevel('primary')}>
                 <div className="icon-container" style={{color: '#10b981'}}><PrimaryIcon/></div>

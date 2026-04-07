@@ -62,7 +62,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.font("Helvetica").fontSize(10).text("Upon entering the portal, you must select the academic level for the reports you intend to generate. This choice configures the entire portal's logic, including subjects and marks calculation.");
       doc.moveDown(0.5);
       doc.list([
-        "Pre-Primary: 4 Subjects (English, Hindi, Maths, E.V.S.) - Total out of 400.",
+        "Pre-Primary: 5 Subjects (English, Hindi, Maths, E.V.S., Drawing + G.K.) - Total out of 500.",
         "Primary: 5 Subjects (Adds Computer + G.K.) - Total out of 500.",
         "Middle: 7 Subjects (Adds Social Science & Sanskrit) - Total out of 700."
       ], { bulletRadius: 2, textIndent: 15 });
