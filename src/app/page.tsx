@@ -11,6 +11,14 @@ const LEVEL_CONFIG = {
   "middle": ["English", "Hindi", "Maths", "E.V.S.", "Computer + G.K.", "Social Science", "Sanskrit"],
 };
 
+const GRADE_ONLY_SUBJECTS: Partial<Record<ReportLevel, string>> = {
+  "pre-primary": "Drawing + G.K.",
+  "primary": "Computer + G.K.",
+};
+
+const isGradeOnlySubject = (level: ReportLevel, subject: string): boolean =>
+  GRADE_ONLY_SUBJECTS[level] === subject;
+
 // --- Professional Icons (SVG) ---
 const PrePrimaryIcon = () => (
   <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -89,9 +97,16 @@ export default function Home() {
         name: "", fatherName: "", motherName: "", className: "", dob: "", qualities: "", workingDays: 200, attendedDays: 0,
       };
       LEVEL_CONFIG[reportLevel].forEach(sub => {
-        initialMarks[`${sub}_P`] = 0;
-        initialMarks[`${sub}_E`] = 0;
-        initialMarks[`${sub}_T`] = 0;
+        if (isGradeOnlySubject(reportLevel, sub)) {
+          initialMarks[`${sub}_P`] = "-";
+          initialMarks[`${sub}_E`] = "-";
+          initialMarks[`${sub}_T`] = "-";
+          initialMarks[`${sub}_G`] = "";
+        } else {
+          initialMarks[`${sub}_P`] = 0;
+          initialMarks[`${sub}_E`] = 0;
+          initialMarks[`${sub}_T`] = 0;
+        }
       });
       setManualData(initialMarks);
       setStudents([]); // Clear queue when level changes to avoid mismatch
@@ -177,6 +192,12 @@ export default function Home() {
     // Validate Marks
     const subjects = LEVEL_CONFIG[reportLevel];
     for (const sub of subjects) {
+      if (isGradeOnlySubject(reportLevel, sub)) {
+        const grade = String(manualData[`${sub}_G`] ?? "").trim();
+        if (!grade) return setError(`${sub.toUpperCase()} Grade is required.`);
+        continue;
+      }
+
       const p = manualData[`${sub}_P`];
       const e = manualData[`${sub}_E`];
       const t = manualData[`${sub}_T`];
@@ -200,14 +221,29 @@ export default function Home() {
       dob: manualData.dob, qualities: manualData.qualities,
       workingDays: Number(manualData.workingDays) || 0,
       attendedDays: Number(manualData.attendedDays) || 0,
-      subjects: subjects.map(sub => ({
-        name: sub,
-        marks: {
-          periodicRaw: Number(manualData[`${sub}_P`]) || 0,
-          enrichment: Number(manualData[`${sub}_E`]) || 0,
-          term2: Number(manualData[`${sub}_T`]) || 0
+      subjects: subjects.map(sub => {
+        if (isGradeOnlySubject(reportLevel, sub)) {
+          return {
+            name: sub,
+            manualGrade: String(manualData[`${sub}_G`] ?? "").trim().toUpperCase(),
+            excludeFromTotals: true,
+            marks: {
+              periodicRaw: 0,
+              enrichment: 0,
+              term2: 0
+            }
+          };
         }
-      }))
+
+        return {
+          name: sub,
+          marks: {
+            periodicRaw: Number(manualData[`${sub}_P`]) || 0,
+            enrichment: Number(manualData[`${sub}_E`]) || 0,
+            term2: Number(manualData[`${sub}_T`]) || 0
+          }
+        };
+      })
     };
     setStudents([...students, s]);
     
@@ -224,6 +260,14 @@ export default function Home() {
       dob: st.dob, qualities: st.qualities, workingDays: st.workingDays, attendedDays: st.attendedDays,
     };
     st.subjects.forEach((sub: any) => {
+      if (isGradeOnlySubject(reportLevel, sub.name)) {
+        editData[`${sub.name}_P`] = "-";
+        editData[`${sub.name}_E`] = "-";
+        editData[`${sub.name}_T`] = "-";
+        editData[`${sub.name}_G`] = sub.manualGrade || "";
+        return;
+      }
+
       editData[`${sub.name}_P`] = sub.marks.periodicRaw;
       editData[`${sub.name}_E`] = sub.marks.enrichment;
       editData[`${sub.name}_T`] = sub.marks.term2;
@@ -400,12 +444,30 @@ export default function Home() {
             </div>
 
             <h3 className="section-title">Academic Metrics ({LEVEL_CONFIG[reportLevel].length} Subjects)</h3>
+            {(reportLevel === "pre-primary" || reportLevel === "primary") && (
+              <div className="alert" style={{marginBottom: "20px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8"}}>
+                {reportLevel === "pre-primary"
+                  ? "Drawing + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals, so the report card calculates out of 400."
+                  : "Computer + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals, so the report card calculates out of 400."}
+              </div>
+            )}
             {LEVEL_CONFIG[reportLevel].map((sub) => (
               <div className="subject-row" style={{display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'}} key={sub}>
                 <div className="subject-name" style={{flex: '1.5', minWidth: '100px'}}>{sub}</div>
-                <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>
-                <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich (10)</label><input type="number" min="0" max="10" className="form-control" value={manualData[`${sub}_E`] || 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: parseInt(e.target.value)})} /></div>
-                <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2 (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>
+                {isGradeOnlySubject(reportLevel, sub) ? (
+                  <>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                    <div style={{flex: '1', minWidth: '100px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Grade</label><input type="text" className="form-control" placeholder="e.g. A1" value={manualData[`${sub}_G`] || ""} onChange={e => setManualData({...manualData, [`${sub}_G`]: e.target.value.toUpperCase()})} /></div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich (10)</label><input type="number" min="0" max="10" className="form-control" value={manualData[`${sub}_E`] || 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: parseInt(e.target.value)})} /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2 (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>
+                  </>
+                )}
               </div>
             ))}
             {error && <div className="alert error" style={{marginTop: '20px'}}>Error: {error}</div>}

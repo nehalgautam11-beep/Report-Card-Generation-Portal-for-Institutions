@@ -11,6 +11,8 @@ export interface SubjectMarks {
 export interface SubjectEntry {
   name: string;
   marks: SubjectMarks;
+  manualGrade?: string;
+  excludeFromTotals?: boolean;
 }
 
 export interface StudentData {
@@ -47,8 +49,8 @@ const getGrade = (percentage: number): string => {
 // Logic to determine the next class based on the current class
 const getPromotedClass = (currentClass: string): string => {
   const cls = (currentClass || "").toLowerCase().trim();
-  if (cls === 'kg 1' || cls === 'junior kg' || cls === 'jkg') return 'Senior KG';
-  if (cls === 'kg 2' || cls === 'senior kg' || cls === 'skg') return '1st';
+  if (cls === 'Kg 1' || cls === 'junior kg' || cls === 'jkg') return 'Senior KG';
+  if (cls === 'Kg 2' || cls === 'senior kg' || cls === 'skg') return '1st';
   if (cls === '1st' || cls === '1') return '2nd';
   if (cls === '2nd' || cls === '2') return '3rd';
   if (cls === '3rd' || cls === '3') return '4th';
@@ -86,9 +88,9 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       const PAGE_H = doc.page.height;
       const MARGIN_X = 45;
 
-      // 1. BACKGROUNDS
-      doc.rect(0, 0, PAGE_W, 130).fill(BG_BLUE);
-      doc.rect(0, 130, PAGE_W, PAGE_H - 130).fill(WHITE);
+      // 1. BACKGROUNDS (Extended height to fit address)
+      doc.rect(0, 0, PAGE_W, 145).fill(BG_BLUE);
+      doc.rect(0, 145, PAGE_W, PAGE_H - 145).fill(WHITE);
 
       // 2. HEADER LOGO & TEXT 
       if (logoBuffer) {
@@ -106,17 +108,21 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.font("Helvetica").fontSize(13).fillColor(TEXT_BLUE);
       doc.text("Innovate to lead", 148, 72);
 
-      // 3. TITLE 
-      doc.font("Helvetica-Bold").fontSize(16).fillColor(TEXT_BLUE);
-      doc.text("REPORT CARD", 0, 145, { align: "center", width: PAGE_W });
+      // --- ADDED ADDRESS HERE ---
+      doc.font("Helvetica").fontSize(10).fillColor(TEXT_BLUE);
+      doc.text("1320, 1321, Sch no. 114, Part 1, Vijay Nagar, Indore, 452010", 148, 92);
 
-      // 4. STUDENT DETAILS (Labels font increased to 12)
-      let curY = 185;
+      // 3. TITLE (Moved down slightly to accommodate header)
+      doc.font("Helvetica-Bold").fontSize(16).fillColor(TEXT_BLUE);
+      doc.text("REPORT CARD", 0, 155, { align: "center", width: PAGE_W });
+
+      // 4. STUDENT DETAILS
+      let curY = 195;
       const col1X = MARGIN_X;
-      const colonX = MARGIN_X + 65; // Shifted colons slightly right to accommodate larger label font
+      const colonX = MARGIN_X + 65; 
       const input1X = colonX + 10;
       const col2X = 295;
-      const input2X = col2X + 100; // Shifted right input start
+      const input2X = col2X + 100; 
 
       const drawAlignedDetail = (label: string, value: string, yPos: number) => {
         doc.font("Helvetica-Bold").fontSize(12).fillColor(TEXT_BLUE).text(label, col1X, yPos);
@@ -146,34 +152,39 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       drawRightDetail("Academic Year:", "2025-26", curY);
       curY += 45;
 
-      // 5. GRADES TABLE 
+      // 5. GRADES TABLE (Recalibrated for 6 Columns)
       const tableW = PAGE_W - (MARGIN_X * 2);
-      const rowH = 45;
+      const rowH = 48; // Taller header to fit tight text breaks
+      
       const c1 = MARGIN_X;
       const c2 = c1 + 100;
-      const c3 = c2 + 95;
-      const c4 = c3 + 95;
-      const c5 = c4 + 95;
+      const c3 = c2 + 80;
+      const c4 = c3 + 80;
+      const c5 = c4 + 80;
+      const c6 = c5 + 80; // The new 6th column
 
       doc.rect(c1, curY, tableW, rowH).fill(WHITE);
       doc.lineWidth(1).strokeColor(BORDER_BLUE);
       doc.rect(c1, curY, tableW, rowH).stroke();
+      
       doc.moveTo(c2, curY).lineTo(c2, curY + rowH).stroke();
       doc.moveTo(c3, curY).lineTo(c3, curY + rowH).stroke();
       doc.moveTo(c4, curY).lineTo(c4, curY + rowH).stroke();
       doc.moveTo(c5, curY).lineTo(c5, curY + rowH).stroke();
+      doc.moveTo(c6, curY).lineTo(c6, curY + rowH).stroke(); // Line for new column
 
       // Header Text
-      // "Subject" font size increased to 12
       doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK);
-      doc.text("Subject", c1 + 5, curY + 16);
+      doc.text("Subject", c1 + 5, curY + 18);
 
-      // Other headers kept at 10 to fit in their boxes
       doc.font("Helvetica-Bold").fontSize(10);
-      doc.text("Periodic Test - 2\n(Out of 10)", c2 + 5, curY + 10, { width: 90 });
-      doc.text("Subject\nEnrichment (Out\nof 10)", c3 + 5, curY + 4, { width: 90 });
-      doc.text("Term - 2\nExamination\n(Out of 80)", c4 + 5, curY + 4, { width: 90 });
-      doc.text("Overall Marks\n(Out of 100)", c5 + 5, curY + 10, { width: 90 });
+      doc.text("Periodic Test - 2\n(Out of 10)", c2 + 5, curY + 8, { width: 70 });
+      doc.text("Subject\nEnrichment\n(Out of 10)", c3 + 5, curY + 4, { width: 70 });
+      doc.text("Term - 2\nExamination\n(Out of 80)", c4 + 5, curY + 4, { width: 70 });
+      doc.text("Overall Marks\n(Out of 100)", c5 + 5, curY + 8, { width: 70 });
+      
+      // --- ADDED NEW COLUMN HEADER ---
+      doc.text("Grade", c6 + 5, curY + 18, { width: 75 }); 
 
       curY += rowH;
 
@@ -181,35 +192,53 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       const dataRowH = 30;
 
       data.subjects.forEach(st => {
+        const isGradeOnlySubject = st.excludeFromTotals || Boolean(st.manualGrade);
         const pRaw = Number(st.marks.periodicRaw) || 0;
         const p = Math.round(pRaw / 2);
         const e = Number(st.marks.enrichment) || 0;
         const t = Number(st.marks.term2) || 0;
         const sum = p + e + t;
-        totalAccumulated += sum;
+        const rowGrade = isGradeOnlySubject
+          ? (st.manualGrade || "-")
+          : getGrade(sum);
+
+        if (!isGradeOnlySubject) {
+          totalAccumulated += sum;
+        }
 
         doc.rect(c1, curY, tableW, dataRowH).strokeColor(BORDER_BLUE).stroke();
         doc.moveTo(c2, curY).lineTo(c2, curY + dataRowH).stroke();
         doc.moveTo(c3, curY).lineTo(c3, curY + dataRowH).stroke();
         doc.moveTo(c4, curY).lineTo(c4, curY + dataRowH).stroke();
         doc.moveTo(c5, curY).lineTo(c5, curY + dataRowH).stroke();
+        doc.moveTo(c6, curY).lineTo(c6, curY + dataRowH).stroke(); // Data line for new column
 
         doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK).text(st.name, c1 + 5, curY + 10);
 
         doc.font("Helvetica").fontSize(12);
-        if (pRaw !== 0 || e !== 0 || t !== 0) {
+        if (isGradeOnlySubject) {
+          doc.text("-", c2 + 5, curY + 10);
+          doc.text("-", c3 + 5, curY + 10);
+          doc.text("-", c4 + 5, curY + 10);
+          doc.text("-", c5 + 5, curY + 10);
+          doc.text(rowGrade, c6 + 5, curY + 10);
+        } else if (pRaw !== 0 || e !== 0 || t !== 0) {
           doc.text(p.toString(), c2 + 5, curY + 10);
           doc.text(e.toString(), c3 + 5, curY + 10);
           doc.text(t.toString(), c4 + 5, curY + 10);
           doc.text(sum.toString(), c5 + 5, curY + 10);
+          doc.text(rowGrade, c6 + 5, curY + 10);
         }
         curY += dataRowH;
       });
 
-      curY += 25;
+      curY += 20;
 
       // 6. STATS & ATTENDANCE 
-      const totalPossible = data.subjects.length * 100;
+      const totalPossible = data.subjects.reduce(
+        (sum, subject) => sum + (subject.excludeFromTotals ? 0 : 100),
+        0
+      );
       const finalPercentage = totalPossible > 0 ? (totalAccumulated / totalPossible) * 100 : 0;
       const finalGrade = getGrade(finalPercentage);
       const nextClass = getPromotedClass(data.className);
@@ -217,7 +246,7 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       const statX = MARGIN_X;
       const drawStat = (label: string, value: string, yPos: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(label, statX, yPos);
-        if (totalAccumulated > 0 || label === "Promoted to:") {
+        if (totalPossible > 0 || label === "Promoted to:") {
           doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(value, statX + 130, yPos);
         }
         doc.moveTo(statX + 120, yPos + 13).lineTo(statX + 235, yPos + 13).strokeColor(BORDER_BLUE).stroke();
@@ -253,13 +282,12 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       drawAttRow("Number of Days Attended", data.attendedDays > 0 ? data.attendedDays.toString() : "", attY + attRowH);
       drawAttRow("Attendance Percentage", attPercValue, attY + (attRowH * 2));
 
-      curY += 105;
+      curY += 95;
 
       // 7. FOOTER & REMARKS
       const footerStartY = curY;
       doc.rect(0, footerStartY, PAGE_W, PAGE_H - footerStartY).fill(BG_BLUE);
 
-      // Decreased height to 90 to make room for moving signatures up
       const remarkBoxHeight = 90;
       curY += 15;
       doc.rect(MARGIN_X, curY, tableW, remarkBoxHeight).fill(WHITE);
@@ -274,9 +302,7 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       }
 
       // 8. SIGNATURES & STAMP SPACE
-      // Gap reduced from 85 to 65 to safely bring the lines up, 
-      // but still leaves enough room for a stamp.
-      curY += remarkBoxHeight + 65;
+      curY += remarkBoxHeight + 80; // Spacing adjusted to ensure everything stays on one page
 
       const sigW = 120;
       doc.strokeColor(TEXT_BLUE).lineWidth(1);
@@ -286,9 +312,9 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.moveTo(PAGE_W - MARGIN_X - sigW, curY).lineTo(PAGE_W - MARGIN_X, curY).stroke();
 
       doc.font("Helvetica").fontSize(11).fillColor(TEXT_LT_BLUE);
-      doc.text("Class Teacher", MARGIN_X, curY + 8, { width: sigW, align: "center" });
-      doc.text("School Stamp", (PAGE_W - sigW) / 2, curY + 8, { width: sigW, align: "center" });
-      doc.text("Principal", PAGE_W - MARGIN_X - sigW, curY + 8, { width: sigW, align: "center" });
+      doc.text("Class Teacher", MARGIN_X, curY + 10, { width: sigW, align: "center" });
+      doc.text("School Stamp", (PAGE_W - sigW) / 2, curY + 10, { width: sigW, align: "center" });
+      doc.text("Principal", PAGE_W - MARGIN_X - sigW, curY + 10, { width: sigW, align: "center" });
 
       doc.end();
     } catch (e) {
