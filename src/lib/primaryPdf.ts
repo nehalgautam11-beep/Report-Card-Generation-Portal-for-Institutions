@@ -48,20 +48,25 @@ const getGrade = (percentage: number): string => {
 
 // Logic to determine the next class based on the current class
 const getPromotedClass = (currentClass: string): string => {
-  const cls = (currentClass || "").toLowerCase().trim();
-  if (cls === 'Nursery') return 'Kg 1';
-  if (cls === 'KG 1' || cls === 'junior kg' || cls === 'jkg' || cls === 'kg1') return 'Senior KG';
-  if (cls === 'KG 2' || cls === 'senior kg' || cls === 'skg' || cls === 'kg2') return '1st';
-  if (cls === '1st' || cls === '1') return '2nd';
-  if (cls === '2nd' || cls === '2') return '3rd';
-  if (cls === '3rd' || cls === '3') return '4th';
-  if (cls === '4th' || cls === '4') return '5th';
-  if (cls === '5th' || cls === '5') return '6th';
-  if (cls === '6th' || cls === '6') return '7th';
-  if (cls === '7th' || cls === '7') return '8th';
-  if (cls === '8th' || cls === '8') return '9th';
-  if (cls === '9th' || cls === '9') return '10th';
-  return '';
+  const cls = (currentClass || "")
+    .toLowerCase()
+    .replace(/[\\/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (cls === "nursery") return "Kg 1";
+  if (cls === "kg 1" || cls === "junior kg" || cls === "jkg" || cls === "kg1") return "Senior KG";
+  if (cls === "kg 2" || cls === "senior kg" || cls === "skg" || cls === "kg2") return "1st";
+  if (cls === "1st" || cls === "1") return "2nd";
+  if (cls === "2nd" || cls === "2") return "3rd";
+  if (cls === "3rd" || cls === "3") return "4th";
+  if (cls === "4th" || cls === "4") return "5th";
+  if (cls === "5th" || cls === "5") return "6th";
+  if (cls === "6th" || cls === "6") return "7th";
+  if (cls === "7th" || cls === "7") return "8th";
+  if (cls === "8th" || cls === "8") return "9th";
+  if (cls === "9th" || cls === "9") return "10th";
+  return "";
 };
 
 export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): Promise<Buffer> => {
