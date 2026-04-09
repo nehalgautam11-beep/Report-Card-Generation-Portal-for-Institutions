@@ -49,6 +49,7 @@ const getGrade = (percentage: number): string => {
 // Logic to determine the next class based on the current class
 const getPromotedClass = (currentClass: string): string => {
   const cls = (currentClass || "").toLowerCase().trim();
+  if (cls === 'Nursery') return 'Kg 1';
   if (cls === 'KG 1' || cls === 'junior kg' || cls === 'jkg' || cls === 'kg1') return 'Senior KG';
   if (cls === 'KG 2' || cls === 'senior kg' || cls === 'skg' || cls === 'kg2') return '1st';
   if (cls === '1st' || cls === '1') return '2nd';
