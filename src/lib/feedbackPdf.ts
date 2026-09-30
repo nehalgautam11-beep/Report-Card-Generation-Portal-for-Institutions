@@ -1,9 +1,12 @@
 import PDFDocument from "pdfkit";
-import type { StudentData } from "./pdfGenerator";
 import fs from "fs";
 import path from "path";
 
-export const generateFeedbackFormPDF = (students: StudentData[], logoBuffer?: Buffer): Promise<Buffer> => {
+export interface FeedbackStudentData {
+  name: string;
+}
+
+export const generateFeedbackFormPDF = (students: FeedbackStudentData[], logoBuffer?: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 40 });
