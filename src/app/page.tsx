@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
 
+type Branch = "branch1" | "branch2";
 type ReportLevel = "pre-primary" | "primary" | "middle";
 
 const LEVEL_CONFIG = {
@@ -20,6 +21,20 @@ const isGradeOnlySubject = (level: ReportLevel, subject: string): boolean =>
   GRADE_ONLY_SUBJECTS[level] === subject;
 
 // --- Professional Icons (SVG) ---
+const MainBranchIcon = () => (
+  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>
+  </svg>
+);
+
+const Branch2Icon = () => (
+  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
 const PrePrimaryIcon = () => (
   <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 10h16M4 14h16M4 18h16M4 6h16" opacity="0.2"/>
@@ -77,6 +92,7 @@ const FileIcon = () => (
 );
 
 export default function Home() {
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [reportLevel, setReportLevel] = useState<ReportLevel | null>(null);
   const [mode, setMode] = useState<"upload" | "manual">("upload");
   const [students, setStudents] = useState<any[]>([]);
@@ -90,7 +106,7 @@ export default function Home() {
     name: "", fatherName: "", motherName: "", className: "", dob: "", qualities: "", workingDays: 200, attendedDays: 0,
   });
 
-  // Initialize/Reset manual data when level changes
+  // Initialize/Reset manual data when level or branch changes
   useEffect(() => {
     if (reportLevel) {
       const initialMarks: any = {
@@ -101,18 +117,20 @@ export default function Home() {
           initialMarks[`${sub}_P`] = "-";
           initialMarks[`${sub}_E`] = "-";
           initialMarks[`${sub}_T`] = "-";
+          initialMarks[`${sub}_Q50`] = "-";
           initialMarks[`${sub}_G`] = "";
         } else {
           initialMarks[`${sub}_P`] = 0;
           initialMarks[`${sub}_E`] = 0;
           initialMarks[`${sub}_T`] = 0;
+          initialMarks[`${sub}_Q50`] = 0;
         }
       });
       setManualData(initialMarks);
       setStudents([]); // Clear queue when level changes to avoid mismatch
       setResultUrl(null);
     }
-  }, [reportLevel]);
+  }, [reportLevel, selectedBranch]);
 
   // Warn before reloading if data exists
   useEffect(() => {
@@ -132,12 +150,12 @@ export default function Home() {
     if (resultUrl) {
       const link = document.createElement("a");
       link.href = resultUrl;
-      link.setAttribute("download", `GIS_Report_Cards_${new Date().getTime()}.zip`);
+      link.setAttribute("download", `GIS_${selectedBranch === "branch2" ? "Branch2_" : ""}Report_Cards_${new Date().getTime()}.zip`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
-  }, [resultUrl]);
+  }, [resultUrl, selectedBranch]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,14 +168,29 @@ export default function Home() {
         try {
           const subjects = LEVEL_CONFIG[reportLevel];
           const parsedStudents = results.data.map((row: any) => {
-            const studentSubjects = subjects.map(sub => ({
-              name: sub,
-              marks: {
-                periodicRaw: parseInt(row[`${sub} Periodic`] || "0", 10) || 0,
-                enrichment: parseInt(row[`${sub} Enrichment`] || "0", 10) || 0,
-                term2: parseInt(row[`${sub} Term2`] || "0", 10) || 0
+            const studentSubjects = subjects.map(sub => {
+              if (selectedBranch === "branch2") {
+                const qVal = row[`${sub} Quarterly`] || row[`${sub} Marks`] || row[`${sub} Term2`] || "0";
+                return {
+                  name: sub,
+                  marks: {
+                    quarterly50: parseInt(qVal, 10) || 0,
+                    periodicRaw: 0,
+                    enrichment: 0,
+                    term2: 0
+                  }
+                };
               }
-            }));
+
+              return {
+                name: sub,
+                marks: {
+                  periodicRaw: parseInt(row[`${sub} Periodic`] || "0", 10) || 0,
+                  enrichment: parseInt(row[`${sub} Enrichment`] || "0", 10) || 0,
+                  term2: parseInt(row[`${sub} Term2`] || "0", 10) || 0
+                }
+              };
+            });
 
             return {
               name: row.Name || "",
@@ -198,12 +231,17 @@ export default function Home() {
         continue;
       }
 
-      const p = manualData[`${sub}_P`];
-      const e = manualData[`${sub}_E`];
-      const t = manualData[`${sub}_T`];
-      if (isNaN(p) || p < 0 || p > 20) return setError(`${sub.toUpperCase()} Periodic Test must be between 0 and 20.`);
-      if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
-      if (isNaN(t) || t < 0 || t > 80) return setError(`${sub.toUpperCase()} Term 2 must be between 0 and 80.`);
+      if (selectedBranch === "branch2") {
+        const q50 = manualData[`${sub}_Q50`];
+        if (isNaN(q50) || q50 < 0 || q50 > 50) return setError(`${sub.toUpperCase()} Quarterly Exam must be between 0 and 50.`);
+      } else {
+        const p = manualData[`${sub}_P`];
+        const e = manualData[`${sub}_E`];
+        const t = manualData[`${sub}_T`];
+        if (isNaN(p) || p < 0 || p > 20) return setError(`${sub.toUpperCase()} Periodic Test must be between 0 and 20.`);
+        if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
+        if (isNaN(t) || t < 0 || t > 80) return setError(`${sub.toUpperCase()} Term 2 must be between 0 and 80.`);
+      }
     }
 
     // Validate Attendance
@@ -227,10 +265,15 @@ export default function Home() {
             name: sub,
             manualGrade: String(manualData[`${sub}_G`] ?? "").trim().toUpperCase(),
             excludeFromTotals: true,
+            marks: selectedBranch === "branch2" ? { quarterly50: 0 } : { periodicRaw: 0, enrichment: 0, term2: 0 }
+          };
+        }
+
+        if (selectedBranch === "branch2") {
+          return {
+            name: sub,
             marks: {
-              periodicRaw: 0,
-              enrichment: 0,
-              term2: 0
+              quarterly50: Number(manualData[`${sub}_Q50`]) || 0
             }
           };
         }
@@ -264,13 +307,18 @@ export default function Home() {
         editData[`${sub.name}_P`] = "-";
         editData[`${sub.name}_E`] = "-";
         editData[`${sub.name}_T`] = "-";
+        editData[`${sub.name}_Q50`] = "-";
         editData[`${sub.name}_G`] = sub.manualGrade || "";
         return;
       }
 
-      editData[`${sub.name}_P`] = sub.marks.periodicRaw;
-      editData[`${sub.name}_E`] = sub.marks.enrichment;
-      editData[`${sub.name}_T`] = sub.marks.term2;
+      if (selectedBranch === "branch2") {
+        editData[`${sub.name}_Q50`] = sub.marks.quarterly50;
+      } else {
+        editData[`${sub.name}_P`] = sub.marks.periodicRaw;
+        editData[`${sub.name}_E`] = sub.marks.enrichment;
+        editData[`${sub.name}_T`] = sub.marks.term2;
+      }
     });
     setManualData(editData);
     setStudents(students.filter((_, idx) => idx !== index));
@@ -280,21 +328,18 @@ export default function Home() {
   const handleGenerate = async () => {
     if (students.length === 0) return setError("No students to process.");
     
-    // Initial Confirmation State
     if (!showConfirm) {
       setShowConfirm(true);
       return;
     }
     
-    // Starting the actual process
     setLoading(true);
     setError(null);
     setResultUrl(null);
-    // DO NOT reset showConfirm here - wait for status or error to ensure UI state doesn't 'jump'
     
     try {
-      console.log("Initiating generation for:", students.length);
-      const res = await fetch("/api/generate", {
+      const endpoint = selectedBranch === "branch2" ? "/api/branch2-generate" : "/api/generate";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ students, reportLevel }),
@@ -312,12 +357,9 @@ export default function Home() {
       const url = window.URL.createObjectURL(blob);
       setResultUrl(url);
       
-      // ONLY now do we reset the confirmation state
       setShowConfirm(false);
-      console.log("Archive ready and auto-downloading.");
     } catch (err: any) {
       console.error("Critical Generation Error:", err);
-      // Ensure the error is prominent and doesn't just disappear
       setError(err.message || "An unexpected error occurred during generation.");
     } finally {
       setLoading(false);
@@ -330,49 +372,65 @@ export default function Home() {
     const headers = [
       "Class", "Name", "Father's Name", "Mother's Name", "DOB", "Working Days", "Attended Days", "Remarks Qualities",
     ];
-    subjects.forEach(sub => {
-      headers.push(`${sub} Periodic`, `${sub} Enrichment`, `${sub} Term2`);
-    });
+    
+    if (selectedBranch === "branch2") {
+      subjects.forEach(sub => {
+        headers.push(`${sub} Quarterly`);
+      });
+      const sample = [
+        "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
+      ];
+      subjects.forEach(() => sample.push("42"));
+      const csvContent = headers.join(",") + "\n" + sample.join(",");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `gis_branch2_${reportLevel}_template.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      subjects.forEach(sub => {
+        headers.push(`${sub} Periodic`, `${sub} Enrichment`, `${sub} Term2`);
+      });
 
-    const sample = [
-      "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
-    ];
-    subjects.forEach(() => sample.push("18", "9", "75"));
+      const sample = [
+        "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
+      ];
+      subjects.forEach(() => sample.push("18", "9", "75"));
 
-    const csvContent = headers.join(",") + "\n" + sample.join(",");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `gis_${reportLevel}_template.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvContent = headers.join(",") + "\n" + sample.join(",");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `gis_${reportLevel}_template.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
-  if (!reportLevel) {
+  // STEP 1: Branch Selection Screen
+  if (!selectedBranch) {
     return (
       <div className="layout-wrapper" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}>
-        <div style={{maxWidth: '800px', width: '100%', padding: '40px', textAlign: 'center'}}>
-           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '180px', marginBottom: '30px', borderRadius: '50%'}} />
-           <h1 style={{color: 'var(--primary)', marginBottom: '10px'}}>Welcome to GIS Portal</h1>
-           <p style={{color: 'var(--text-muted)', marginBottom: '40px'}}>Please select the academic level to begin generating report cards.</p>
+        <div style={{maxWidth: '850px', width: '100%', padding: '40px', textAlign: 'center'}}>
+           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '170px', marginBottom: '25px', borderRadius: '50%'}} />
+           <h1 style={{color: 'var(--primary)', marginBottom: '10px'}}>Global Innovative School</h1>
+           <p style={{color: 'var(--text-muted)', marginBottom: '40px', fontSize: '1.1rem'}}>Select your school branch to access the report card portal</p>
            
-           <div className="grid-3" style={{gap: '20px'}}>
-              <div card-level="pre-primary" className="level-card" onClick={() => setReportLevel('pre-primary')}>
-                <div className="icon-container" style={{color: '#f59e0b'}}><PrePrimaryIcon/></div>
-                <h3>Pre-Primary</h3>
-                <p>5 Subjects Grid (Out of 500)</p>
+           <div className="grid-2" style={{gap: '30px'}}>
+              <div className="level-card" onClick={() => setSelectedBranch('branch1')}>
+                <div className="icon-container" style={{color: '#3b82f6'}}><MainBranchIcon/></div>
+                <h3>GIS Main Branch</h3>
+                <p>Standard Report Cards (Term 1 / Term 2)</p>
               </div>
-              <div card-level="primary" className="level-card" onClick={() => setReportLevel('primary')}>
-                <div className="icon-container" style={{color: '#10b981'}}><PrimaryIcon/></div>
-                <h3>Primary</h3>
-                <p>5 Subjects Grid (Out of 500)</p>
-              </div>
-              <div card-level="middle" className="level-card" onClick={() => setReportLevel('middle')}>
-                <div className="icon-container" style={{color: '#3b82f6'}}><MiddleIcon/></div>
-                <h3>Middle</h3>
-                <p>7 Subjects Grid (Out of 700)</p>
+              <div className="level-card" onClick={() => setSelectedBranch('branch2')}>
+                <div className="icon-container" style={{color: '#8b5cf6'}}><Branch2Icon/></div>
+                <h3>GIS Branch 2 Report Cards</h3>
+                <p>Quarterly Examination (Out of 50)</p>
               </div>
            </div>
         </div>
@@ -380,6 +438,45 @@ export default function Home() {
     );
   }
 
+  // STEP 2: Level Selection Screen (Pre-Primary, Primary, Middle)
+  if (!reportLevel) {
+    return (
+      <div className="layout-wrapper" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}>
+        <div style={{maxWidth: '850px', width: '100%', padding: '40px', textAlign: 'center'}}>
+           <div style={{marginBottom: '20px'}}>
+             <button className="button-secondary" style={{padding: '6px 16px', fontSize: '0.9rem'}} onClick={() => setSelectedBranch(null)}>
+               ← Change Branch ({selectedBranch === 'branch2' ? 'Branch 2' : 'Main Branch'})
+             </button>
+           </div>
+           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '150px', marginBottom: '20px', borderRadius: '50%'}} />
+           <h1 style={{color: 'var(--primary)', marginBottom: '10px'}}>
+             {selectedBranch === "branch2" ? "GIS Branch 2 Portal" : "GIS Main Branch Portal"}
+           </h1>
+           <p style={{color: 'var(--text-muted)', marginBottom: '35px'}}>Select the academic wing to begin generating report cards.</p>
+           
+           <div className="grid-3" style={{gap: '20px'}}>
+              <div card-level="pre-primary" className="level-card" onClick={() => setReportLevel('pre-primary')}>
+                <div className="icon-container" style={{color: '#f59e0b'}}><PrePrimaryIcon/></div>
+                <h3>Pre-Primary Wing</h3>
+                <p>{selectedBranch === 'branch2' ? '5 Subjects (Out of 200)' : '5 Subjects Grid (Out of 500)'}</p>
+              </div>
+              <div card-level="primary" className="level-card" onClick={() => setReportLevel('primary')}>
+                <div className="icon-container" style={{color: '#10b981'}}><PrimaryIcon/></div>
+                <h3>Primary Wing</h3>
+                <p>{selectedBranch === 'branch2' ? '5 Subjects (Out of 200)' : '5 Subjects Grid (Out of 500)'}</p>
+              </div>
+              <div card-level="middle" className="level-card" onClick={() => setReportLevel('middle')}>
+                <div className="icon-container" style={{color: '#3b82f6'}}><MiddleIcon/></div>
+                <h3>Middle Wing</h3>
+                <p>{selectedBranch === 'branch2' ? '7 Subjects (Out of 350)' : '7 Subjects Grid (Out of 700)'}</p>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 3: Orchestrator Dashboard
   return (
     <div className="layout-wrapper">
       <div className="sidebar" style={{textAlign: 'center'}}>
@@ -387,11 +484,14 @@ export default function Home() {
           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '100px', borderRadius: '50%'}} />
         </div>
         <div className="school-brand">Global<br/>Innovative<br/>School</div>
-        <div className="school-subtitle">{reportLevel.toUpperCase()} Portal</div>
+        <div className="school-subtitle">{selectedBranch === "branch2" ? "BRANCH 2" : "MAIN BRANCH"}<br/>{reportLevel.toUpperCase()}</div>
         
         <div className="sidebar-nav">
           <div className="sidebar-nav-item clickable" onClick={() => { if(confirm("Change level? Current queue will be cleared.")) setReportLevel(null); }}>
-            <RefreshIcon/> Change Level
+            <RefreshIcon/> Change Wing
+          </div>
+          <div className="sidebar-nav-item clickable" onClick={() => { if(confirm("Change branch? Current queue will be cleared.")) { setReportLevel(null); setSelectedBranch(null); } }}>
+            <RefreshIcon/> Change Branch
           </div>
           <div className="sidebar-nav-item active">
             <DashboardIcon/> Dashboard
@@ -403,7 +503,9 @@ export default function Home() {
       </div>
 
       <div className="main-content">
-        <h2>{reportLevel.charAt(0).toUpperCase() + reportLevel.slice(1)} Orchestrator</h2>
+        <h2>
+          {selectedBranch === "branch2" ? "GIS Branch 2" : "GIS Main Branch"} - {reportLevel.charAt(0).toUpperCase() + reportLevel.slice(1)} Wing
+        </h2>
         <div style={{textAlign: 'center', marginBottom: '30px'}}>
           <div className="toggle-group">
             <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}>Bulk CSV Upload</button>
@@ -425,7 +527,7 @@ export default function Home() {
             </div>
             <div style={{textAlign: 'center'}}>
               <button className="button-secondary" onClick={downloadTemplate}>
-                Download {reportLevel.toUpperCase()} Template
+                Download {selectedBranch === "branch2" ? "Branch 2 " : ""}{reportLevel.toUpperCase()} Template
               </button>
             </div>
           </div>
@@ -447,8 +549,8 @@ export default function Home() {
             {(reportLevel === "pre-primary" || reportLevel === "primary") && (
               <div className="alert" style={{marginBottom: "20px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8"}}>
                 {reportLevel === "pre-primary"
-                  ? "Drawing + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals, so the report card calculates out of 400."
-                  : "Computer + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals, so the report card calculates out of 400."}
+                  ? "Drawing + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."
+                  : "Computer + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."}
               </div>
             )}
             {LEVEL_CONFIG[reportLevel].map((sub) => (
@@ -456,11 +558,19 @@ export default function Home() {
                 <div className="subject-name" style={{flex: '1.5', minWidth: '100px'}}>{sub}</div>
                 {isGradeOnlySubject(reportLevel, sub) ? (
                   <>
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                    {selectedBranch === "branch2" ? (
+                      <div style={{flex: '1', minWidth: '120px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Exam</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                    ) : (
+                      <>
+                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                      </>
+                    )}
                     <div style={{flex: '1', minWidth: '100px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Grade</label><input type="text" className="form-control" placeholder="e.g. A1" value={manualData[`${sub}_G`] || ""} onChange={e => setManualData({...manualData, [`${sub}_G`]: e.target.value.toUpperCase()})} /></div>
                   </>
+                ) : selectedBranch === "branch2" ? (
+                  <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="number" min="0" max="50" className="form-control" value={manualData[`${sub}_Q50`] || 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
                 ) : (
                   <>
                     <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>
@@ -479,7 +589,7 @@ export default function Home() {
 
         {students.length > 0 && (
           <div style={{marginTop: '40px', borderTop: '2px solid var(--border)', paddingTop: '30px'}}>
-            <h2 style={{textAlign: 'center', marginBottom: '20px'}}>Queue: {students.length} Profiles</h2>
+            <h2 style={{textAlign: 'center', marginBottom: '20px'}}>Queue: {students.length} Profiles ({selectedBranch === 'branch2' ? 'Branch 2' : 'Main Branch'})</h2>
             <div className="table-responsive" style={{marginBottom: '25px', maxHeight: '400px'}}>
               <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '600px'}}>
                 <thead>
@@ -509,7 +619,7 @@ export default function Home() {
             </div>
             {showConfirm && (
               <div className="alert" style={{background: '#fff7ed', border: '2px solid #fdba74', color: '#c2410c', marginBottom: '15px'}}>
-                <strong>Verification Required:</strong> Generating {students.length} report cards for {reportLevel.toUpperCase()}?
+                <strong>Verification Required:</strong> Generating {students.length} report cards for {selectedBranch === 'branch2' ? 'BRANCH 2' : 'MAIN BRANCH'} ({reportLevel.toUpperCase()})?
                 <button className="button-secondary" style={{marginLeft: '15px'}} onClick={() => setShowConfirm(false)}>Cancel</button>
               </div>
             )}
