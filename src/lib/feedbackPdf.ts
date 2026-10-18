@@ -25,7 +25,7 @@ export const generateFeedbackFormPDF = (students: FeedbackStudentData[], logoBuf
       if (logoBuffer) {
         try { doc.image(logoBuffer, MARGIN, 30, { width: 55 }); } catch (_) {}
       } else {
-        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+        const logoPath = path.join(process.cwd(), "public", "icon.png");
         if (fs.existsSync(logoPath)) {
           try { doc.image(logoPath, MARGIN, 30, { width: 55 }); } catch (_) {}
         }

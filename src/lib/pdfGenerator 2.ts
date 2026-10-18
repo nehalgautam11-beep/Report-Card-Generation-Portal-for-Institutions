@@ -95,7 +95,7 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       if (logoBuffer) {
         try { doc.image(logoBuffer, MARGIN_X, 28, { width: 85 }); } catch(_) {}
       } else {
-        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+        const logoPath = path.join(process.cwd(), "public", "icon.png");
         if (fs.existsSync(logoPath)) {
           try { doc.image(logoPath, MARGIN_X, 28, { width: 85 }); } catch(_) {}
         }
@@ -144,7 +144,7 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
 
       // Row 3
       drawAlignedDetail("DOB", data.dob, curY);
-      drawRightDetail("Academic Year:", "2025-26", curY);
+      drawRightDetail("Academic Year:", "2026-27", curY);
       curY += 45; 
 
       // 5. GRADES TABLE 

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "GIS Report Card Portal",
   description: "Global Innovative School Report Card Orchestrator",
   icons: {
-    icon: "/gis_logo.png",
+    icon: "/icon.png",
   },
 };
 

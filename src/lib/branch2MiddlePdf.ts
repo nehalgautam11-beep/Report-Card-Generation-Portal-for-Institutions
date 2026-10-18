@@ -99,7 +99,7 @@ export const generateBranch2MiddleReportCardPDF = (
       if (logoBuffer) {
         try { doc.image(logoBuffer, MARGIN_X, 24, { width: 85 }); } catch (_) { }
       } else {
-        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+        const logoPath = path.join(process.cwd(), "public", "icon.png");
         if (fs.existsSync(logoPath)) {
           try { doc.image(logoPath, MARGIN_X, 24, { width: 85 }); } catch (_) { }
         }
@@ -145,7 +145,7 @@ export const generateBranch2MiddleReportCardPDF = (
       curY += 32;
 
       drawAlignedDetail("DOB", data.dob, curY);
-      drawRightDetail("Academic Year:", "2025-26", curY);
+      drawRightDetail("Academic Year:", "2026-27", curY);
       curY += 45;
 
       // 5. GRADES TABLE (Branch 2: 3 Columns)

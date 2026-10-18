@@ -20,7 +20,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.moveDown();
       doc.fontSize(12).fillColor(TEXT_COLOR).text("V2.0 Automated Report Generation System", { align: "center" });
       
-      const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+      const logoPath = path.join(process.cwd(), "public", "icon.png");
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, (doc.page.width - 150) / 2, doc.y + 30, { width: 150 });
       }

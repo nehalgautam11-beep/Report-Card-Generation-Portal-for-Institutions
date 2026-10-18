@@ -19,8 +19,6 @@ export interface StudentData {
   motherName: string;
   className: string;
   dob: string;
-  workingDays: number;
-  attendedDays: number;
   subjects: SubjectEntry[];
   remarks?: string;
 }
@@ -44,24 +42,6 @@ const getGrade = (percentage: number): string => {
   if (percentage >= 41) return "C2";
   if (percentage >= 33) return "D";
   return "E";
-};
-
-// Logic to determine the next class based on the current class
-const getPromotedClass = (currentClass: string): string => {
-  const cls = (currentClass || "").toLowerCase().trim();
-  if (cls === 'kg 1' || cls === 'junior kg' || cls === 'jkg') return 'Senior KG';
-  if (cls === 'kg 2' || cls === 'senior kg' || cls === 'skg') return '1st';
-  if (cls === '1st' || cls === '1') return '2nd';
-  if (cls === '2nd' || cls === '2') return '3rd';
-  if (cls === '3rd' || cls === '3') return '4th';
-  if (cls === '4th' || cls === '4') return '5th';
-  if (cls === 'Nursery' || cls === 'nursery') return 'KG 1';
-  if (cls === '5th' || cls === '5') return '6th';
-  if (cls === '6th' || cls === '6') return '7th';
-  if (cls === '7th' || cls === '7') return '8th';
-  if (cls === '8th' || cls === '8') return '9th';
-  if (cls === '9th' || cls === '9') return '10th';
-  return '';
 };
 
 // Slightly adjusted heights to comfortably fit the new address line
@@ -123,7 +103,7 @@ export const generateReportCardPDF = (
       if (logoBuffer) {
         try { doc.image(logoBuffer, MARGIN_X, 28, { width: 85 }); } catch (_) { }
       } else {
-        const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+        const logoPath = path.join(process.cwd(), "public", "icon.png");
         if (fs.existsSync(logoPath)) {
           try { doc.image(logoPath, MARGIN_X, 28, { width: 85 }); } catch (_) { }
         }
@@ -173,7 +153,7 @@ export const generateReportCardPDF = (
       curY += 32;
 
       drawAlignedDetail("DOB", data.dob, curY);
-      drawRightDetail("Academic Year:", "2025-26", curY);
+      drawRightDetail("Academic Year:", "2026- 27", curY);
       curY += 45;
 
       // 5. GRADES TABLE (Recalibrated for 6 Columns)
@@ -203,9 +183,9 @@ export const generateReportCardPDF = (
       doc.text("Subject", c1 + 5, curY + 18);
 
       doc.font("Helvetica-Bold").fontSize(10);
-      doc.text("Periodic Test - 2\n(Out of 10)", c2 + 5, curY + 8, { width: 70 });
+      doc.text("Periodic Test - 1\n(Out of 10)", c2 + 5, curY + 8, { width: 70 });
       doc.text("Subject\nEnrichment\n(Out of 10)", c3 + 5, curY + 4, { width: 70 });
-      doc.text("Term - 2\nExamination\n(Out of 80)", c4 + 5, curY + 4, { width: 70 });
+      doc.text("Half Yearly Marks\n(Out of 80)", c4 + 5, curY + 8, { width: 70 });
       doc.text("Overall Marks\n(Out of 100)", c5 + 5, curY + 8, { width: 70 });
       
       // --- ADDED NEW COLUMN HEADER ---
@@ -253,12 +233,10 @@ export const generateReportCardPDF = (
       const totalPossible = data.subjects.length * 100;
       const finalPercentage = totalPossible > 0 ? (totalAccumulated / totalPossible) * 100 : 0;
       const finalGrade = getGrade(finalPercentage);
-      const nextClass = getPromotedClass(data.className);
-
       const statX = MARGIN_X;
       const drawStat = (label: string, value: string, yPos: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(label, statX, yPos);
-        if (totalAccumulated > 0 || label === "Promoted to:") {
+        if (totalAccumulated > 0) {
           doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(value, statX + 130, yPos);
         }
         doc.moveTo(statX + 120, yPos + 13).lineTo(statX + 235, yPos + 13).strokeColor(BORDER_BLUE).stroke();
@@ -268,33 +246,7 @@ export const generateReportCardPDF = (
       drawStat("Overall Percentage:", `${finalPercentage.toFixed(2)}%`, curY + 25);
       drawStat("Overall Grade:", finalGrade, curY + 50);
 
-      if (nextClass) {
-        drawStat("Promoted to:", nextClass, curY + 75);
-      }
-
-      const attW = 230;
-      const attX = PAGE_W - MARGIN_X - attW;
-
-      doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text("Attendance", attX, curY - 5, { width: attW, align: "center" });
-
-      const attRowH = 20;
-      const attSplitX = attX + 130;
-      let attY = curY + 10;
-
-      const drawAttRow = (label: string, value: string, yPos: number) => {
-        doc.rect(attX, yPos, attW, attRowH).strokeColor(BORDER_BLUE).stroke();
-        doc.moveTo(attSplitX, yPos).lineTo(attSplitX, yPos + attRowH).stroke();
-        doc.font("Helvetica").fontSize(9).fillColor(TEXT_GREEN).text(label, attX + 5, yPos + 6);
-        doc.font("Helvetica-Bold").fontSize(9).fillColor(BLACK).text(value, attSplitX + 5, yPos + 6);
-      };
-
-      const attPercValue = data.workingDays > 0 ? ((data.attendedDays / data.workingDays) * 100).toFixed(2) + "%" : "0.00%";
-
-      drawAttRow("Total Working Days", data.workingDays > 0 ? data.workingDays.toString() : "", attY);
-      drawAttRow("Number of Days Attended", data.attendedDays > 0 ? data.attendedDays.toString() : "", attY + attRowH);
-      drawAttRow("Attendance Percentage", attPercValue, attY + (attRowH * 2));
-
-      curY += 105;
+      curY += 70;
 
       // 7. FOOTER & REMARKS
       const footerStartY = curY;

@@ -191,9 +191,9 @@ export default function Home() {
               return {
                 name: sub,
                 marks: {
-                  periodicRaw: parseInt(row[`${sub} Periodic`] || "0", 10) || 0,
+                  periodicRaw: parseInt(row[`${sub} Periodic Test 1`] || row[`${sub} Periodic`] || "0", 10) || 0,
                   enrichment: parseInt(row[`${sub} Enrichment`] || "0", 10) || 0,
-                  term2: parseInt(row[`${sub} Term2`] || "0", 10) || 0
+                  term2: parseInt(row[`${sub} Half Yearly`] || row[`${sub} Term2`] || "0", 10) || 0
                 }
               };
             });
@@ -205,8 +205,10 @@ export default function Home() {
               className: row.Class || "",
               dob: row.DOB || "",
               qualities: row["Remarks Qualities"] || "",
-              workingDays: parseInt(row["Working Days"] || "0", 10) || 0,
-              attendedDays: parseInt(row["Attended Days"] || "0", 10) || 0,
+              ...(selectedBranch === "branch2" ? {
+                workingDays: parseInt(row["Working Days"] || "0", 10) || 0,
+                attendedDays: parseInt(row["Attended Days"] || "0", 10) || 0,
+              } : {}),
               subjects: studentSubjects
             };
           });
@@ -244,18 +246,19 @@ export default function Home() {
         const p = manualData[`${sub}_P`];
         const e = manualData[`${sub}_E`];
         const t = manualData[`${sub}_T`];
-        if (isNaN(p) || p < 0 || p > 20) return setError(`${sub.toUpperCase()} Periodic Test must be between 0 and 20.`);
+        if (isNaN(p) || p < 0 || p > 20) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20.`);
         if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
-        if (isNaN(t) || t < 0 || t > 80) return setError(`${sub.toUpperCase()} Term 2 must be between 0 and 80.`);
+        if (isNaN(t) || t < 0 || t > 80) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and 80.`);
       }
     }
 
-    // Validate Attendance
-    if (isNaN(manualData.workingDays) || isNaN(manualData.attendedDays) || manualData.attendedDays < 0 || manualData.workingDays < 0) {
-      return setError("Attendance days cannot be negative or invalid.");
-    }
-    if (manualData.attendedDays > manualData.workingDays) {
-      return setError("Attended days cannot exceed Total Working days.");
+    if (selectedBranch === "branch2") {
+      if (isNaN(manualData.workingDays) || isNaN(manualData.attendedDays) || manualData.attendedDays < 0 || manualData.workingDays < 0) {
+        return setError("Attendance days cannot be negative or invalid.");
+      }
+      if (manualData.attendedDays > manualData.workingDays) {
+        return setError("Attended days cannot exceed Total Working days.");
+      }
     }
 
     setError(null);
@@ -263,8 +266,10 @@ export default function Home() {
     const s = {
       name: manualData.name, fatherName: manualData.fatherName, motherName: manualData.motherName, className: manualData.className,
       dob: manualData.dob, qualities: manualData.qualities,
-      workingDays: Number(manualData.workingDays) || 0,
-      attendedDays: Number(manualData.attendedDays) || 0,
+      ...(selectedBranch === "branch2" ? {
+        workingDays: Number(manualData.workingDays) || 0,
+        attendedDays: Number(manualData.attendedDays) || 0,
+      } : {}),
       subjects: subjects.map(sub => {
         if (isGradeOnlySubject(reportLevel, sub)) {
           return {
@@ -376,10 +381,11 @@ export default function Home() {
     if (!reportLevel) return;
     const subjects = LEVEL_CONFIG[reportLevel];
     const headers = [
-      "Class", "Name", "Father's Name", "Mother's Name", "DOB", "Working Days", "Attended Days", "Remarks Qualities",
+      "Class", "Name", "Father's Name", "Mother's Name", "DOB",
     ];
     
     if (selectedBranch === "branch2") {
+      headers.push("Working Days", "Attended Days", "Remarks Qualities");
       subjects.forEach(sub => {
         headers.push(`${sub} Quarterly`);
       });
@@ -397,12 +403,13 @@ export default function Home() {
       link.click();
       document.body.removeChild(link);
     } else {
+      headers.push("Remarks Qualities");
       subjects.forEach(sub => {
-        headers.push(`${sub} Periodic`, `${sub} Enrichment`, `${sub} Term2`);
+        headers.push(`${sub} Periodic Test 1`, `${sub} Enrichment`, `${sub} Half Yearly`);
       });
 
       const sample = [
-        "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
+        "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "Curious, helpful, disciplined",
       ];
       subjects.forEach(() => sample.push("18", "9", "75"));
 
@@ -423,7 +430,7 @@ export default function Home() {
     return (
       <div className="layout-wrapper" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}>
         <div style={{maxWidth: '850px', width: '100%', padding: '40px', textAlign: 'center'}}>
-           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '170px', marginBottom: '25px', borderRadius: '50%'}} />
+           <img src="/icon.png" alt="GIS Logo" style={{maxWidth: '170px', marginBottom: '25px', borderRadius: '50%'}} />
            <h1 style={{color: 'var(--primary)', marginBottom: '10px'}}>Global Innovative School</h1>
            <p style={{color: 'var(--text-muted)', marginBottom: '40px', fontSize: '1.1rem'}}>Select your school branch to access the report card portal</p>
            
@@ -431,7 +438,7 @@ export default function Home() {
               <div className="level-card" onClick={() => setSelectedBranch('branch1')}>
                 <div className="icon-container" style={{color: '#3b82f6'}}><MainBranchIcon/></div>
                 <h3>GIS Main Branch</h3>
-                <p>Standard Report Cards (Term 1 / Term 2)</p>
+                <p>Periodic Test 1 and Half Yearly Report Cards</p>
               </div>
 
               <div className="level-card" onClick={() => setSelectedBranch('branch2')}>
@@ -443,7 +450,7 @@ export default function Home() {
               <div className="level-card" onClick={() => setSelectedBranch('nipania')}>
                 <div className="icon-container" style={{color: '#10b981'}}><MainBranchIcon/></div>
                 <h3>GIS Nipania</h3>
-                <p>Standard Report Cards (Term 1 / Term 2)</p>
+                <p>Periodic Test 1 and Half Yearly Report Cards</p>
               </div>
            </div>
         </div>
@@ -467,7 +474,7 @@ export default function Home() {
                ← Change Branch ({branchTitle.replace("GIS ", "")})
              </button>
            </div>
-           <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '150px', marginBottom: '20px', borderRadius: '50%'}} />
+           <img src="/icon.png" alt="GIS Logo" style={{maxWidth: '150px', marginBottom: '20px', borderRadius: '50%'}} />
            <h1 style={{color: 'var(--primary)', marginBottom: '10px'}}>
              {branchTitle} Portal
            </h1>
@@ -500,7 +507,7 @@ export default function Home() {
     <div className="layout-wrapper">
       <div className="sidebar" style={{textAlign: 'center'}}>
         <div style={{marginBottom: '20px', display: 'flex', justifyContent: 'center', zIndex: 1, position: 'relative'}}>
-          <img src="/gis_logo.png" alt="GIS Logo" style={{maxWidth: '100px', borderRadius: '50%'}} />
+          <img src="/icon.png" alt="GIS Logo" style={{maxWidth: '100px', borderRadius: '50%'}} />
         </div>
         <div className="school-brand">Global<br/>Innovative<br/>School</div>
         <div className="school-subtitle">
@@ -563,8 +570,10 @@ export default function Home() {
               <div className="form-group"><label>Mother's Name</label><input type="text" className="form-control" value={manualData.motherName} onChange={e => setManualData({...manualData, motherName: e.target.value})} /></div>
               <div className="form-group"><label>Date of Birth</label><input type="text" className="form-control" placeholder="DD/MM/YYYY" value={manualData.dob} onChange={e => setManualData({...manualData, dob: e.target.value})} /></div>
               <div className="form-group"><label>Remark Qualities</label><input type="text" className="form-control" placeholder="e.g. hard working, creative" value={manualData.qualities} onChange={e => setManualData({...manualData, qualities: e.target.value})} /></div>
-              <div className="form-group"><label>Working Days</label><input type="number" className="form-control" value={manualData.workingDays} onChange={e => setManualData({...manualData, workingDays: parseInt(e.target.value)})} /></div>
-              <div className="form-group"><label>Attended Days</label><input type="number" className="form-control" value={manualData.attendedDays} onChange={e => setManualData({...manualData, attendedDays: parseInt(e.target.value)})} /></div>
+              {selectedBranch === "branch2" && <>
+                <div className="form-group"><label>Working Days</label><input type="number" className="form-control" value={manualData.workingDays} onChange={e => setManualData({...manualData, workingDays: parseInt(e.target.value)})} /></div>
+                <div className="form-group"><label>Attended Days</label><input type="number" className="form-control" value={manualData.attendedDays} onChange={e => setManualData({...manualData, attendedDays: parseInt(e.target.value)})} /></div>
+              </>}
             </div>
 
             <h3 className="section-title">Academic Metrics ({LEVEL_CONFIG[reportLevel].length} Subjects)</h3>
@@ -584,9 +593,9 @@ export default function Home() {
                       <div style={{flex: '1', minWidth: '120px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Exam</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
                     ) : (
                       <>
-                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
                         <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
-                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
+                        <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
                       </>
                     )}
                     <div style={{flex: '1', minWidth: '100px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Grade</label><input type="text" className="form-control" placeholder="e.g. A1" value={manualData[`${sub}_G`] || ""} onChange={e => setManualData({...manualData, [`${sub}_G`]: e.target.value.toUpperCase()})} /></div>
@@ -595,9 +604,9 @@ export default function Home() {
                   <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="number" min="0" max="50" className="form-control" value={manualData[`${sub}_Q50`] || 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
                 ) : (
                   <>
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>
                     <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Enrich (10)</label><input type="number" min="0" max="10" className="form-control" value={manualData[`${sub}_E`] || 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: parseInt(e.target.value)})} /></div>
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Term 2 (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>
                   </>
                 )}
               </div>

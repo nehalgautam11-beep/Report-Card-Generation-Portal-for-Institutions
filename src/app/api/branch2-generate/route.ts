@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     let logoBuffer: Buffer | undefined;
-    const logoPath = path.join(process.cwd(), "public", "gis_logo.png");
+    const logoPath = path.join(process.cwd(), "public", "icon.png");
     if (fs.existsSync(logoPath)) {
       try {
         logoBuffer = fs.readFileSync(logoPath);
