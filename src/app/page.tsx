@@ -173,8 +173,24 @@ export default function Home() {
       complete: (results) => {
         try {
           const subjects = LEVEL_CONFIG[reportLevel];
-          const parsedStudents = results.data.map((row: any) => {
+          let missingGrade: string | null = null;
+          const parsedStudents = results.data.map((row: any, rowIndex: number) => {
             const studentSubjects = subjects.map(sub => {
+              if (isGradeOnlySubject(reportLevel, sub)) {
+                const grade = String(row[`${sub} Grade`] ?? "").trim().toUpperCase();
+                if (!grade && !missingGrade) {
+                  missingGrade = `Row ${rowIndex + 2}: ${sub} Grade is required.`;
+                }
+                return {
+                  name: sub,
+                  manualGrade: grade,
+                  excludeFromTotals: true,
+                  marks: selectedBranch === "branch2"
+                    ? { quarterly50: 0 }
+                    : { periodicRaw: 0, enrichment: 0, term2: 0 }
+                };
+              }
+
               if (selectedBranch === "branch2") {
                 const qVal = row[`${sub} Quarterly`] || row[`${sub} Marks`] || row[`${sub} Term2`] || "0";
                 return {
@@ -212,6 +228,10 @@ export default function Home() {
               subjects: studentSubjects
             };
           });
+          if (missingGrade) {
+            setError(missingGrade);
+            return;
+          }
           setStudents(parsedStudents);
           setError(null);
         } catch (err) {
@@ -387,12 +407,18 @@ export default function Home() {
     if (selectedBranch === "branch2") {
       headers.push("Working Days", "Attended Days", "Remarks Qualities");
       subjects.forEach(sub => {
-        headers.push(`${sub} Quarterly`);
+        if (isGradeOnlySubject(reportLevel, sub)) {
+          headers.push(`${sub} Grade`);
+        } else {
+          headers.push(`${sub} Quarterly`);
+        }
       });
       const sample = [
         "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
       ];
-      subjects.forEach(() => sample.push("42"));
+      subjects.forEach(sub => {
+        sample.push(isGradeOnlySubject(reportLevel, sub) ? "A1" : "42");
+      });
       const csvContent = headers.join(",") + "\n" + sample.join(",");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -405,13 +431,23 @@ export default function Home() {
     } else {
       headers.push("Remarks Qualities");
       subjects.forEach(sub => {
-        headers.push(`${sub} Periodic Test 1`, `${sub} Enrichment`, `${sub} Half Yearly`);
+        if (isGradeOnlySubject(reportLevel, sub)) {
+          headers.push(`${sub} Grade`);
+        } else {
+          headers.push(`${sub} Periodic Test 1`, `${sub} Enrichment`, `${sub} Half Yearly`);
+        }
       });
 
       const sample = [
         "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "Curious, helpful, disciplined",
       ];
-      subjects.forEach(() => sample.push("18", "9", "75"));
+      subjects.forEach(sub => {
+        if (isGradeOnlySubject(reportLevel, sub)) {
+          sample.push("A1");
+        } else {
+          sample.push("18", "9", "75");
+        }
+      });
 
       const csvContent = headers.join(",") + "\n" + sample.join(",");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
