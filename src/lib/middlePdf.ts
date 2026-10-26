@@ -1,11 +1,13 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { displayMark, isAbsentMark, markToScore } from "./marks";
+import type { MarkValue } from "./marks";
 
 export interface SubjectMarks {
-  periodicRaw: number;
-  enrichment: number;
-  term2: number;
+  periodicRaw: MarkValue;
+  enrichment: MarkValue;
+  term2: MarkValue;
 }
 
 export interface SubjectEntry {
@@ -197,11 +199,12 @@ export const generateReportCardPDF = (
       const dataRowH = 30;
 
       data.subjects.forEach(st => {
-        const pRaw = Number(st.marks.periodicRaw) || 0;
+        const pRaw = markToScore(st.marks.periodicRaw);
         const p = Math.round(pRaw / 2);
-        const e = Number(st.marks.enrichment) || 0;
-        const t = Number(st.marks.term2) || 0;
+        const e = markToScore(st.marks.enrichment);
+        const t = markToScore(st.marks.term2);
         const sum = p + e + t;
+        const hasAbsentMark = isAbsentMark(st.marks.periodicRaw) || isAbsentMark(st.marks.enrichment) || isAbsentMark(st.marks.term2);
         
         // Calculate the individual row's grade
         const rowGrade = getGrade((sum / 100) * 100); 
@@ -217,10 +220,10 @@ export const generateReportCardPDF = (
         doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK).text(st.name, c1 + 5, curY + 10);
 
         doc.font("Helvetica").fontSize(12);
-        if (pRaw !== 0 || e !== 0 || t !== 0) {
-          doc.text(p.toString(), c2 + 5, curY + 10);
-          doc.text(e.toString(), c3 + 5, curY + 10);
-          doc.text(t.toString(), c4 + 5, curY + 10);
+        if (pRaw !== 0 || e !== 0 || t !== 0 || hasAbsentMark) {
+          doc.text(isAbsentMark(st.marks.periodicRaw) ? "Ab" : p.toString(), c2 + 5, curY + 10);
+          doc.text(displayMark(st.marks.enrichment), c3 + 5, curY + 10);
+          doc.text(displayMark(st.marks.term2), c4 + 5, curY + 10);
           doc.text(sum.toString(), c5 + 5, curY + 10);
           doc.text(rowGrade, c6 + 5, curY + 10); // Print the grade
         }

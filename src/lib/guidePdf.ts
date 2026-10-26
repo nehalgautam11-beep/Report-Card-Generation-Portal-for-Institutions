@@ -125,7 +125,8 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.list([
         "Main Branch Pre-Primary: Half Yearly (Max 40) + Subject Enrichment (Max 10) = 50 per scored subject. A2 is 40–45 marks. Periodic Test 1 is not included.",
         "Other levels in Main Branch and Nipania: Periodic Test 1 (entered out of 20 and shown out of 10), Enrichment (Max 10), and Half Yearly (Max 80) = 100 per scored subject.",
-        "Branch 2 uses its separate Quarterly Examination (Max 50) criteria."
+        "Branch 2 uses its separate Quarterly Examination (Max 50) criteria.",
+        "Enter Ab for an absent exam. The report card displays Ab, and that exam contributes 0 marks to the totals."
       ], { bulletRadius: 2, textIndent: 15 });
       doc.moveDown(0.5);
       doc.fillColor("#991b1b").text("CRITICAL: The system will block entries if a score exceeds these maximum limits.");

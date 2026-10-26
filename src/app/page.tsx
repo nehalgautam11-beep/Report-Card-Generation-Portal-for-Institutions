@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
+import { isValidMarkInput, markForPayload, parseImportedMark } from "@/lib/marks";
 
 type Branch = "branch1" | "branch2" | "nipania";
 type ReportLevel = "pre-primary" | "primary" | "middle";
@@ -201,7 +202,7 @@ export default function Home() {
                 return {
                   name: sub,
                   marks: {
-                    quarterly50: parseInt(qVal, 10) || 0,
+                    quarterly50: parseImportedMark(qVal),
                     periodicRaw: 0,
                     enrichment: 0,
                     term2: 0
@@ -209,16 +210,16 @@ export default function Home() {
                 };
               }
 
-              const enrichment = parseInt(row[`${sub} Enrichment (10)`] || row[`${sub} Enrichment`] || "0", 10) || 0;
-              const halfYearly = parseInt(row[`${sub} Half Yearly (40)`] || row[`${sub} Half Yearly`] || row[`${sub} Term2`] || "0", 10) || 0;
-              if (mainPrePrimaryCriteria && (enrichment < 0 || enrichment > 10 || halfYearly < 0 || halfYearly > 40) && !invalidMarks) {
+              const enrichment = parseImportedMark(row[`${sub} Enrichment (10)`] || row[`${sub} Enrichment`] || "0");
+              const halfYearly = parseImportedMark(row[`${sub} Half Yearly (40)`] || row[`${sub} Half Yearly`] || row[`${sub} Term2`] || "0");
+              if (mainPrePrimaryCriteria && (!isValidMarkInput(enrichment, 10) || !isValidMarkInput(halfYearly, 40)) && !invalidMarks) {
                 invalidMarks = `Row ${rowIndex + 2}: ${sub} must have Half Yearly marks from 0 to 40 and Subject Enrichment marks from 0 to 10.`;
               }
 
               return {
                 name: sub,
                 marks: {
-                  periodicRaw: mainPrePrimaryCriteria ? 0 : parseInt(row[`${sub} Periodic Test 1`] || row[`${sub} Periodic`] || "0", 10) || 0,
+                  periodicRaw: mainPrePrimaryCriteria ? 0 : parseImportedMark(row[`${sub} Periodic Test 1`] || row[`${sub} Periodic`] || "0"),
                   enrichment,
                   term2: halfYearly
                 }
@@ -276,15 +277,15 @@ export default function Home() {
 
       if (selectedBranch === "branch2") {
         const q50 = manualData[`${sub}_Q50`];
-        if (isNaN(q50) || q50 < 0 || q50 > 50) return setError(`${sub.toUpperCase()} Quarterly Exam must be between 0 and 50.`);
+        if (!isValidMarkInput(q50, 50)) return setError(`${sub.toUpperCase()} Quarterly Exam must be between 0 and 50, or Ab.`);
       } else {
         const p = manualData[`${sub}_P`];
         const e = manualData[`${sub}_E`];
         const t = manualData[`${sub}_T`];
-        if (!mainPrePrimaryCriteria && (isNaN(p) || p < 0 || p > 20)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20.`);
-        if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
+        if (!mainPrePrimaryCriteria && !isValidMarkInput(p, 20)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20, or Ab.`);
+        if (!isValidMarkInput(e, 10)) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10, or Ab.`);
         const halfYearlyMax = mainPrePrimaryCriteria ? 40 : 80;
-        if (isNaN(t) || t < 0 || t > halfYearlyMax) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and ${halfYearlyMax}.`);
+        if (!isValidMarkInput(t, halfYearlyMax)) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and ${halfYearlyMax}, or Ab.`);
       }
     }
 
@@ -320,7 +321,7 @@ export default function Home() {
           return {
             name: sub,
             marks: {
-              quarterly50: Number(manualData[`${sub}_Q50`]) || 0
+              quarterly50: markForPayload(manualData[`${sub}_Q50`])
             }
           };
         }
@@ -328,9 +329,9 @@ export default function Home() {
         return {
           name: sub,
           marks: {
-            periodicRaw: Number(manualData[`${sub}_P`]) || 0,
-            enrichment: Number(manualData[`${sub}_E`]) || 0,
-            term2: Number(manualData[`${sub}_T`]) || 0
+            periodicRaw: mainPrePrimaryCriteria ? 0 : markForPayload(manualData[`${sub}_P`]),
+            enrichment: markForPayload(manualData[`${sub}_E`]),
+            term2: markForPayload(manualData[`${sub}_T`])
           }
         };
       })
@@ -607,7 +608,7 @@ export default function Home() {
               <p style={{color: 'var(--text-muted)'}}>
                 {students.length > 0 
                   ? <span style={{color: 'var(--accent-color)', fontWeight: 600}}>✅ {students.length} Student(s) loaded.</span> 
-                  : `Select or drop your ${reportLevel} CSV to begin batch process.`}
+                  : `Select or drop your ${reportLevel} CSV to begin batch process. Enter Ab for an absent exam; it will count as 0.`}
               </p>
             </div>
             <div style={{textAlign: 'center'}}>
@@ -659,13 +660,13 @@ export default function Home() {
                     <div style={{flex: '1', minWidth: '100px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Grade</label><input type="text" className="form-control" placeholder="e.g. A1" value={manualData[`${sub}_G`] || ""} onChange={e => setManualData({...manualData, [`${sub}_G`]: e.target.value.toUpperCase()})} /></div>
                   </>
                 ) : selectedBranch === "branch2" ? (
-                  <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="number" min="0" max="50" className="form-control" value={manualData[`${sub}_Q50`] || 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
+                  <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_Q50`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: e.target.value})} /></div>
                 ) : (
                   <>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>}
-                    {mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (40)</label><input type="number" min="0" max="40" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>}
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10)</label><input type="number" min="0" max="10" className="form-control" value={manualData[`${sub}_E`] || 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: parseInt(e.target.value)})} /></div>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>}
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_P`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: e.target.value})} /></div>}
+                    {mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (40; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: e.target.value})} /></div>}
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_E`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: e.target.value})} /></div>
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: e.target.value})} /></div>}
                   </>
                 )}
               </div>

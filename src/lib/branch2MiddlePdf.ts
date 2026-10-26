@@ -1,12 +1,14 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { displayMark, markToScore } from "./marks";
+import type { MarkValue } from "./marks";
 
 export interface SubjectMarks {
-  periodicRaw?: number;
-  enrichment?: number;
-  term2?: number;
-  quarterly50?: number;
+  periodicRaw?: MarkValue;
+  enrichment?: MarkValue;
+  term2?: MarkValue;
+  quarterly50?: MarkValue;
 }
 
 export interface SubjectEntry {
@@ -177,7 +179,8 @@ export const generateBranch2MiddleReportCardPDF = (
 
       data.subjects.forEach(st => {
         const isGradeOnlySubject = st.excludeFromTotals || Boolean(st.manualGrade);
-        const qMarks = Number(st.marks.quarterly50 ?? st.marks.term2 ?? st.marks.periodicRaw ?? 0);
+        const rawQuarterlyMark = st.marks.quarterly50 ?? st.marks.term2 ?? st.marks.periodicRaw ?? 0;
+        const qMarks = markToScore(rawQuarterlyMark);
         const rowGrade = isGradeOnlySubject
           ? (st.manualGrade || "-")
           : getGradeFor50(qMarks);
@@ -198,7 +201,7 @@ export const generateBranch2MiddleReportCardPDF = (
           doc.text("-", c2 + 10, curY + 9, { width: 140, align: "center" });
           doc.text(rowGrade, c3 + 10, curY + 9, { width: tableW - (c3 - c1) - 20, align: "center" });
         } else {
-          doc.text(qMarks.toString(), c2 + 10, curY + 9, { width: 140, align: "center" });
+          doc.text(displayMark(rawQuarterlyMark), c2 + 10, curY + 9, { width: 140, align: "center" });
           doc.text(rowGrade, c3 + 10, curY + 9, { width: tableW - (c3 - c1) - 20, align: "center" });
         }
         curY += dataRowH;
