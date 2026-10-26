@@ -62,7 +62,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.font("Helvetica").fontSize(10).text("Upon entering the portal, you must select the academic level for the reports you intend to generate. This choice configures the entire portal's logic, including subjects and marks calculation.");
       doc.moveDown(0.5);
       doc.list([
-        "Main Branch Pre-Primary: English, Hindi, Maths, and E.V.S. are each out of 50 (total 200); Drawing + G.K. is grade-only. Other branches retain their existing criteria.",
+        "Main Branch Pre-Primary: English, Hindi, Maths, and E.V.S. are each out of 50 (total 200). Other branches retain their existing criteria and subjects.",
         "Primary: 5 Subjects (Adds Computer + G.K.) - Total out of 500.",
         "Middle: 7 Subjects (Adds Social Science & Sanskrit) - Total out of 700."
       ], { bulletRadius: 2, textIndent: 15 });
@@ -125,8 +125,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.list([
         "Main Branch Pre-Primary: Half Yearly (Max 40) + Subject Enrichment (Max 10) = 50 per scored subject. A2 is 40–45 marks. Periodic Test 1 is not included.",
         "Other levels in Main Branch and Nipania: Periodic Test 1 (entered out of 20 and shown out of 10), Enrichment (Max 10), and Half Yearly (Max 80) = 100 per scored subject.",
-        "Branch 2 uses its separate Quarterly Examination (Max 50) criteria.",
-        "Enter Ab for an absent exam. The report card displays Ab, and that exam contributes 0 marks to the totals."
+        "Branch 2 uses its separate Quarterly Examination (Max 50) criteria."
       ], { bulletRadius: 2, textIndent: 15 });
       doc.moveDown(0.5);
       doc.fillColor("#991b1b").text("CRITICAL: The system will block entries if a score exceeds these maximum limits.");
