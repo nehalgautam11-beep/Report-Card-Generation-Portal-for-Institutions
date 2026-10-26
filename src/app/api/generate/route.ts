@@ -15,9 +15,10 @@ interface StudentPayload extends StudentData {
 
 export async function POST(req: NextRequest) {
   try {
-    const { students, reportLevel } = await req.json() as {
+    const { students, reportLevel, branch } = await req.json() as {
       students: StudentPayload[];
       reportLevel?: ReportLevel;
+      branch?: "branch1" | "nipania";
     };
 
     if (!students || students.length === 0) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
 
       // 2. Generate PDF
-      const pdfBuffer = await generateReportCardPDF(student, logoBuffer, reportLevel);
+      const pdfBuffer = await generateReportCardPDF(student, logoBuffer, reportLevel, branch === "branch1");
 
       // 3. Add to ZIP
       const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;

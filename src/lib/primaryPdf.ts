@@ -33,9 +33,9 @@ const toTitleCase = (str: string): string => {
     .join(" ");
 };
 
-const getGrade = (percentage: number): string => {
+const getGrade = (percentage: number, mainPrePrimaryCriteria = false): string => {
   if (percentage >= 91) return "A1";
-  if (percentage >= 81) return "A2";
+  if (percentage >= (mainPrePrimaryCriteria ? 80 : 81)) return "A2";
   if (percentage >= 71) return "B1";
   if (percentage >= 61) return "B2";
   if (percentage >= 51) return "C1";
@@ -44,7 +44,7 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): Promise<Buffer> => {
+export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer, mainPrePrimaryCriteria = false): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -133,16 +133,16 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       drawRightDetail("Academic Year:", "2026- 27", curY);
       curY += 45;
 
-      // 5. GRADES TABLE (Recalibrated for 6 Columns)
+      // 5. GRADES TABLE
       const tableW = PAGE_W - (MARGIN_X * 2);
       const rowH = 48; // Taller header to fit tight text breaks
       
       const c1 = MARGIN_X;
       const c2 = c1 + 100;
-      const c3 = c2 + 80;
-      const c4 = c3 + 80;
-      const c5 = c4 + 80;
-      const c6 = c5 + 80; // The new 6th column
+      const c3 = c2 + (mainPrePrimaryCriteria ? 100 : 80);
+      const c4 = c3 + (mainPrePrimaryCriteria ? 100 : 80);
+      const c5 = c4 + (mainPrePrimaryCriteria ? 100 : 80);
+      const c6 = c5 + 80;
 
       doc.rect(c1, curY, tableW, rowH).fill(WHITE);
       doc.lineWidth(1).strokeColor(BORDER_BLUE);
@@ -152,20 +152,26 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       doc.moveTo(c3, curY).lineTo(c3, curY + rowH).stroke();
       doc.moveTo(c4, curY).lineTo(c4, curY + rowH).stroke();
       doc.moveTo(c5, curY).lineTo(c5, curY + rowH).stroke();
-      doc.moveTo(c6, curY).lineTo(c6, curY + rowH).stroke(); // Line for new column
+      if (!mainPrePrimaryCriteria) doc.moveTo(c6, curY).lineTo(c6, curY + rowH).stroke();
 
       // Header Text
       doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK);
       doc.text("Subject", c1 + 5, curY + 18);
 
       doc.font("Helvetica-Bold").fontSize(10);
-      doc.text("Periodic Test - 1\n(Out of 10)", c2 + 5, curY + 8, { width: 70 });
-      doc.text("Subject\nEnrichment\n(Out of 10)", c3 + 5, curY + 4, { width: 70 });
-      doc.text("Half Yearly Marks\n(Out of 80)", c4 + 5, curY + 8, { width: 70 });
-      doc.text("Overall Marks\n(Out of 100)", c5 + 5, curY + 8, { width: 70 });
+      if (mainPrePrimaryCriteria) {
+        doc.text("Half Yearly Marks\n(Out of 40)", c2 + 5, curY + 8, { width: 85 });
+        doc.text("Subject Enrichment\n(Out of 10)", c3 + 5, curY + 8, { width: 85 });
+        doc.text("Overall Marks\n(Out of 50)", c4 + 5, curY + 8, { width: 85 });
+      } else {
+        doc.text("Periodic Test - 1\n(Out of 10)", c2 + 5, curY + 8, { width: 70 });
+        doc.text("Subject\nEnrichment\n(Out of 10)", c3 + 5, curY + 4, { width: 70 });
+        doc.text("Half Yearly Marks\n(Out of 80)", c4 + 5, curY + 8, { width: 70 });
+        doc.text("Overall Marks\n(Out of 100)", c5 + 5, curY + 8, { width: 70 });
+      }
       
       // --- ADDED NEW COLUMN HEADER ---
-      doc.text("Grade", c6 + 5, curY + 18, { width: 75 }); 
+      doc.text("Grade", (mainPrePrimaryCriteria ? c5 : c6) + 5, curY + 18, { width: 75 });
 
       curY += rowH;
 
@@ -175,13 +181,13 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
       data.subjects.forEach(st => {
         const isGradeOnlySubject = st.excludeFromTotals || Boolean(st.manualGrade);
         const pRaw = Number(st.marks.periodicRaw) || 0;
-        const p = Math.round(pRaw / 2);
+        const p = mainPrePrimaryCriteria ? 0 : Math.round(pRaw / 2);
         const e = Number(st.marks.enrichment) || 0;
         const t = Number(st.marks.term2) || 0;
-        const sum = p + e + t;
+        const sum = mainPrePrimaryCriteria ? e + t : p + e + t;
         const rowGrade = isGradeOnlySubject
           ? (st.manualGrade || "-")
-          : getGrade(sum);
+          : getGrade(mainPrePrimaryCriteria ? (sum / 50) * 100 : sum, mainPrePrimaryCriteria);
 
         if (!isGradeOnlySubject) {
           totalAccumulated += sum;
@@ -192,23 +198,36 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
         doc.moveTo(c3, curY).lineTo(c3, curY + dataRowH).stroke();
         doc.moveTo(c4, curY).lineTo(c4, curY + dataRowH).stroke();
         doc.moveTo(c5, curY).lineTo(c5, curY + dataRowH).stroke();
-        doc.moveTo(c6, curY).lineTo(c6, curY + dataRowH).stroke(); // Data line for new column
+        if (!mainPrePrimaryCriteria) doc.moveTo(c6, curY).lineTo(c6, curY + dataRowH).stroke();
 
         doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK).text(st.name, c1 + 5, curY + 10);
 
         doc.font("Helvetica").fontSize(12);
         if (isGradeOnlySubject) {
-          doc.text("-", c2 + 5, curY + 10);
-          doc.text("-", c3 + 5, curY + 10);
-          doc.text("-", c4 + 5, curY + 10);
-          doc.text("-", c5 + 5, curY + 10);
-          doc.text(rowGrade, c6 + 5, curY + 10);
+          if (mainPrePrimaryCriteria) {
+            doc.text("-", c2 + 5, curY + 10);
+            doc.text("-", c3 + 5, curY + 10);
+            doc.text("-", c4 + 5, curY + 10);
+            doc.text(rowGrade, c5 + 5, curY + 10);
+          } else {
+            doc.text("-", c2 + 5, curY + 10);
+            doc.text("-", c3 + 5, curY + 10);
+            doc.text("-", c4 + 5, curY + 10);
+            doc.text("-", c5 + 5, curY + 10);
+            doc.text(rowGrade, c6 + 5, curY + 10);
+          }
         } else if (pRaw !== 0 || e !== 0 || t !== 0) {
-          doc.text(p.toString(), c2 + 5, curY + 10);
-          doc.text(e.toString(), c3 + 5, curY + 10);
-          doc.text(t.toString(), c4 + 5, curY + 10);
-          doc.text(sum.toString(), c5 + 5, curY + 10);
-          doc.text(rowGrade, c6 + 5, curY + 10);
+          if (mainPrePrimaryCriteria) {
+            doc.text(t.toString(), c2 + 5, curY + 10);
+            doc.text(e.toString(), c3 + 5, curY + 10);
+            doc.text(sum.toString(), c4 + 5, curY + 10);
+          } else {
+            doc.text(p.toString(), c2 + 5, curY + 10);
+            doc.text(e.toString(), c3 + 5, curY + 10);
+            doc.text(t.toString(), c4 + 5, curY + 10);
+            doc.text(sum.toString(), c5 + 5, curY + 10);
+          }
+          doc.text(rowGrade, (mainPrePrimaryCriteria ? c5 : c6) + 5, curY + 10);
         }
         curY += dataRowH;
       });
@@ -217,11 +236,11 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer): P
 
       // 6. STATS & ATTENDANCE 
       const totalPossible = data.subjects.reduce(
-        (sum, subject) => sum + (subject.excludeFromTotals ? 0 : 100),
+        (sum, subject) => sum + (subject.excludeFromTotals ? 0 : mainPrePrimaryCriteria ? 50 : 100),
         0
       );
       const finalPercentage = totalPossible > 0 ? (totalAccumulated / totalPossible) * 100 : 0;
-      const finalGrade = getGrade(finalPercentage);
+      const finalGrade = getGrade(finalPercentage, mainPrePrimaryCriteria);
       const statX = MARGIN_X;
       const drawStat = (label: string, value: string, yPos: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(label, statX, yPos);

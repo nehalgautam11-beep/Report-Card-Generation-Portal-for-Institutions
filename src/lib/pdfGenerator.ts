@@ -22,11 +22,12 @@ const inferReportLevelFromClassName = (className: string): ReportLevel => {
 export const generateReportCardPDF = (
   data: StudentData,
   logoBuffer?: Buffer,
-  reportLevel?: ReportLevel
+  reportLevel?: ReportLevel,
+  useMainPrePrimaryCriteria = false
 ): Promise<Buffer> => {
   const resolvedLevel = reportLevel ?? inferReportLevelFromClassName(data.className);
 
   return resolvedLevel === "middle"
     ? generateMiddleReportCardPDF(data, logoBuffer, "middle")
-    : generatePrimaryReportCardPDF(data, logoBuffer);
+    : generatePrimaryReportCardPDF(data, logoBuffer, useMainPrePrimaryCriteria && resolvedLevel === "pre-primary");
 };
