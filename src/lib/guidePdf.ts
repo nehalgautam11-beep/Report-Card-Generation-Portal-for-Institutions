@@ -126,7 +126,7 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
         "Main Branch Pre-Primary: Half Yearly (Max 40) + Subject Enrichment (Max 10) = 50 per scored subject. A2 is 40–45 marks. Periodic Test 1 is not included.",
         "Main Branch Middle: Computer + G.K. is grade-only; enter its grade in the report form or CSV Grade column. Its marks are excluded from totals.",
         "Primary and other scored subjects in Main Branch and Nipania: Periodic Test 1 (entered out of 20 and shown out of 10), Enrichment (Max 10), and Half Yearly (Max 80) = 100 per scored subject.",
-        "Main Branch Middle accepts Ab for an absent exam mark. It displays as Ab and contributes 0 to totals.",
+        "Main Branch Pre-Primary, Primary, and Middle accept Ab for an absent exam mark. It displays as Ab and contributes 0 to totals.",
         "Branch 2 uses its separate Quarterly Examination (Max 50) criteria."
       ], { bulletRadius: 2, textIndent: 15 });
       doc.moveDown(0.5);

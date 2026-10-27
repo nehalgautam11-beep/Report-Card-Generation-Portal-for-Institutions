@@ -32,12 +32,15 @@ const usesMainPrePrimaryCriteria = (branch: Branch | null, level: ReportLevel): 
 const usesMainMiddleCriteria = (branch: Branch | null, level: ReportLevel): boolean =>
   branch === "branch1" && level === "middle";
 
-const parseMiddleMark = (value: unknown, allowAbsent: boolean): number | "Ab" => {
+const usesMainBranchAbsentMarks = (branch: Branch | null): boolean =>
+  branch === "branch1";
+
+const parseMainBranchMark = (value: unknown, allowAbsent: boolean): number | "Ab" => {
   if (allowAbsent && String(value ?? "").trim().toUpperCase() === "AB") return "Ab";
   return Number.parseInt(String(value ?? "0"), 10) || 0;
 };
 
-const isValidMiddleMark = (value: unknown, max: number, allowAbsent: boolean): boolean => {
+const isValidMarkInput = (value: unknown, max: number, allowAbsent: boolean): boolean => {
   if (allowAbsent && String(value ?? "").trim().toUpperCase() === "AB") return true;
   const text = String(value ?? "").trim();
   if (!text) return false;
@@ -45,7 +48,7 @@ const isValidMiddleMark = (value: unknown, max: number, allowAbsent: boolean): b
   return Number.isInteger(score) && score >= 0 && score <= max;
 };
 
-const middleMarkForPayload = (value: unknown, allowAbsent: boolean): number | "Ab" =>
+const mainBranchMarkForPayload = (value: unknown, allowAbsent: boolean): number | "Ab" =>
   allowAbsent && String(value ?? "").trim().toUpperCase() === "AB"
     ? "Ab"
     : Number(value) || 0;
@@ -164,6 +167,7 @@ export default function Home() {
   const [showConfirm, setShowConfirm] = useState(false);
   const mainPrePrimaryCriteria = usesMainPrePrimaryCriteria(selectedBranch, reportLevel ?? "primary");
   const mainMiddleCriteria = usesMainMiddleCriteria(selectedBranch, reportLevel ?? "primary");
+  const mainBranchAbsentMarks = usesMainBranchAbsentMarks(selectedBranch);
 
   // Manual Form State - Dynamic based on subjects
   const [manualData, setManualData] = useState<any>({
@@ -237,8 +241,8 @@ export default function Home() {
       complete: (results) => {
         try {
           const subjects = getLevelSubjects(selectedBranch, reportLevel);
-          const readMark = (value: unknown) => mainMiddleCriteria
-            ? parseMiddleMark(value, true)
+          const readMark = (value: unknown) => mainBranchAbsentMarks
+            ? parseMainBranchMark(value, true)
             : Number.parseInt(String(value ?? "0"), 10) || 0;
           let missingGrade: string | null = null;
           let invalidMarks: string | null = null;
@@ -280,8 +284,7 @@ export default function Home() {
               }
               const halfYearly = readMark(halfYearlyCell.value);
               if (mainPrePrimaryCriteria && (
-                typeof enrichment !== "number" || enrichment < 0 || enrichment > 10 ||
-                typeof halfYearly !== "number" || halfYearly < 0 || halfYearly > 40
+                !isValidMarkInput(enrichment, 10, true) || !isValidMarkInput(halfYearly, 40, true)
               ) && !invalidMarks) {
                 invalidMarks = `Row ${rowIndex + 2}: ${sub} must have Half Yearly marks from 0 to 40 and Subject Enrichment marks from 0 to 10.`;
               }
@@ -356,10 +359,11 @@ export default function Home() {
         const p = manualData[`${sub}_P`];
         const e = manualData[`${sub}_E`];
         const t = manualData[`${sub}_T`];
-        if (mainMiddleCriteria) {
-          if (!isValidMiddleMark(p, 20, true)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20, or Ab.`);
-          if (!isValidMiddleMark(e, 10, true)) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10, or Ab.`);
-          if (!isValidMiddleMark(t, 80, true)) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and 80, or Ab.`);
+        if (mainBranchAbsentMarks) {
+          if (!mainPrePrimaryCriteria && !isValidMarkInput(p, 20, true)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20, or Ab.`);
+          if (!isValidMarkInput(e, 10, true)) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10, or Ab.`);
+          const halfYearlyMax = mainPrePrimaryCriteria ? 40 : 80;
+          if (!isValidMarkInput(t, halfYearlyMax, true)) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and ${halfYearlyMax}, or Ab.`);
         } else {
           if (!mainPrePrimaryCriteria && (isNaN(p) || p < 0 || p > 20)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20.`);
           if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
@@ -409,9 +413,9 @@ export default function Home() {
         return {
           name: sub,
           marks: {
-            periodicRaw: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_P`], true) : Number(manualData[`${sub}_P`]) || 0,
-            enrichment: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_E`], true) : Number(manualData[`${sub}_E`]) || 0,
-            term2: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_T`], true) : Number(manualData[`${sub}_T`]) || 0
+            periodicRaw: mainBranchAbsentMarks ? mainBranchMarkForPayload(manualData[`${sub}_P`], true) : Number(manualData[`${sub}_P`]) || 0,
+            enrichment: mainBranchAbsentMarks ? mainBranchMarkForPayload(manualData[`${sub}_E`], true) : Number(manualData[`${sub}_E`]) || 0,
+            term2: mainBranchAbsentMarks ? mainBranchMarkForPayload(manualData[`${sub}_T`], true) : Number(manualData[`${sub}_T`]) || 0
           }
         };
       })
@@ -688,7 +692,7 @@ export default function Home() {
               <p style={{color: 'var(--text-muted)'}}>
                 {students.length > 0 
                   ? <span style={{color: 'var(--accent-color)', fontWeight: 600}}>✅ {students.length} Student(s) loaded.</span> 
-                  : `Select or drop your ${reportLevel} CSV to begin batch process.${mainMiddleCriteria ? " Use the Computer + G.K. Grade column and enter Ab for absent exam marks; Ab counts as 0." : ""}`}
+                  : `Select or drop your ${reportLevel} CSV to begin batch process.${mainMiddleCriteria ? " Use the Computer + G.K. Grade column and enter Ab for absent exam marks; Ab counts as 0." : mainBranchAbsentMarks ? " Enter Ab for absent exam marks; Ab counts as 0." : ""}`}
               </p>
             </div>
             <div style={{textAlign: 'center'}}>
@@ -719,9 +723,11 @@ export default function Home() {
                 {mainMiddleCriteria
                   ? "Middle Wing: Computer + G.K. is grade-only. Enter the teacher's grade manually or in the CSV Grade column. For scored subjects, enter Ab for an absent exam; it displays as Ab and counts as 0."
                   : mainPrePrimaryCriteria
-                    ? "Pre-Primary scoring: Half Yearly is out of 40 and Subject Enrichment is out of 10 (50 total per scored subject). A2 is 40–45."
+                    ? "Pre-Primary scoring: Half Yearly is out of 40 and Subject Enrichment is out of 10 (50 total per scored subject). A2 is 40–45. Enter Ab for an absent exam; it counts as 0."
                   : reportLevel === "pre-primary"
                     ? "Drawing + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."
+                    : mainBranchAbsentMarks
+                      ? "Computer + G.K. is grade-only. Enter its grade manually or in the CSV Grade column. For scored subjects, enter Ab for an absent exam; it counts as 0."
                     : "Computer + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."}
               </div>
             )}
@@ -742,13 +748,13 @@ export default function Home() {
                     <div style={{flex: '1', minWidth: '100px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Grade</label><input type="text" className="form-control" placeholder="e.g. A1" value={manualData[`${sub}_G`] || ""} onChange={e => setManualData({...manualData, [`${sub}_G`]: e.target.value.toUpperCase()})} /></div>
                   </>
                 ) : selectedBranch === "branch2" ? (
-                  <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="number" min="0" max="50" className="form-control" value={manualData[`${sub}_Q50`] || 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
+                  <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="text" className="form-control" value={manualData[`${sub}_Q50`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
                 ) : (
                   <>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 20} className="form-control" value={manualData[`${sub}_P`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>}
-                    {mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (40)</label><input type="number" min="0" max="40" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>}
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 10} className="form-control" value={manualData[`${sub}_E`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 80} className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>}
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20{mainBranchAbsentMarks ? '; enter Ab if absent' : ''})</label><input type="text" className="form-control" value={manualData[`${sub}_P`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: mainBranchAbsentMarks ? e.target.value : parseInt(e.target.value)})} /></div>}
+                    {mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (40; enter Ab if absent)</label><input type="text" className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: mainBranchAbsentMarks ? e.target.value : parseInt(e.target.value)})} /></div>}
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10{mainBranchAbsentMarks ? '; enter Ab if absent' : ''})</label><input type="text" className="form-control" value={manualData[`${sub}_E`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: mainBranchAbsentMarks ? e.target.value : parseInt(e.target.value)})} /></div>
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80{mainBranchAbsentMarks ? '; enter Ab if absent' : ''})</label><input type="text" className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: mainBranchAbsentMarks ? e.target.value : parseInt(e.target.value)})} /></div>}
                   </>
                 )}
               </div>

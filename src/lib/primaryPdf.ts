@@ -3,9 +3,9 @@ import fs from "fs";
 import path from "path";
 
 export interface SubjectMarks {
-  periodicRaw: number;
-  enrichment: number;
-  term2: number;
+  periodicRaw: number | string;
+  enrichment: number | string;
+  term2: number | string;
 }
 
 export interface SubjectEntry {
@@ -32,6 +32,15 @@ const toTitleCase = (str: string): string => {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 };
+
+const isAbsentMark = (value: number | string): boolean =>
+  typeof value === "string" && value.trim().toUpperCase() === "AB";
+
+const markToScore = (value: number | string): number =>
+  isAbsentMark(value) ? 0 : Number(value) || 0;
+
+const displayMark = (value: number | string, scaledValue?: number): string =>
+  isAbsentMark(value) ? "Ab" : String(scaledValue ?? markToScore(value));
 
 const getGrade = (percentage: number, mainPrePrimaryCriteria = false): string => {
   if (percentage >= 91) return "A1";
@@ -180,10 +189,11 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer, ma
 
       data.subjects.forEach(st => {
         const isGradeOnlySubject = st.excludeFromTotals || Boolean(st.manualGrade);
-        const pRaw = Number(st.marks.periodicRaw) || 0;
+        const pRaw = markToScore(st.marks.periodicRaw);
         const p = mainPrePrimaryCriteria ? 0 : Math.round(pRaw / 2);
-        const e = Number(st.marks.enrichment) || 0;
-        const t = Number(st.marks.term2) || 0;
+        const e = markToScore(st.marks.enrichment);
+        const t = markToScore(st.marks.term2);
+        const hasAbsentMark = isAbsentMark(st.marks.periodicRaw) || isAbsentMark(st.marks.enrichment) || isAbsentMark(st.marks.term2);
         const sum = mainPrePrimaryCriteria ? e + t : p + e + t;
         const rowGrade = isGradeOnlySubject
           ? (st.manualGrade || "-")
@@ -216,15 +226,15 @@ export const generateReportCardPDF = (data: StudentData, logoBuffer?: Buffer, ma
             doc.text("-", c5 + 5, curY + 10);
             doc.text(rowGrade, c6 + 5, curY + 10);
           }
-        } else if (pRaw !== 0 || e !== 0 || t !== 0) {
+        } else if (pRaw !== 0 || e !== 0 || t !== 0 || hasAbsentMark) {
           if (mainPrePrimaryCriteria) {
-            doc.text(t.toString(), c2 + 5, curY + 10);
-            doc.text(e.toString(), c3 + 5, curY + 10);
+            doc.text(displayMark(st.marks.term2), c2 + 5, curY + 10);
+            doc.text(displayMark(st.marks.enrichment), c3 + 5, curY + 10);
             doc.text(sum.toString(), c4 + 5, curY + 10);
           } else {
-            doc.text(p.toString(), c2 + 5, curY + 10);
-            doc.text(e.toString(), c3 + 5, curY + 10);
-            doc.text(t.toString(), c4 + 5, curY + 10);
+            doc.text(displayMark(st.marks.periodicRaw, p), c2 + 5, curY + 10);
+            doc.text(displayMark(st.marks.enrichment), c3 + 5, curY + 10);
+            doc.text(displayMark(st.marks.term2), c4 + 5, curY + 10);
             doc.text(sum.toString(), c5 + 5, curY + 10);
           }
           doc.text(rowGrade, (mainPrePrimaryCriteria ? c5 : c6) + 5, curY + 10);
