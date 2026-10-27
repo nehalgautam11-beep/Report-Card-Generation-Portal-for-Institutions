@@ -120,11 +120,13 @@ export const generateUserGuidePDF = (): Promise<Buffer> => {
       doc.addPage();
       doc.font("Helvetica-Bold").fontSize(18).fillColor(SECONDARY_COLOR).text("6. Subject & Mark Validation", 50, 50);
       doc.moveDown();
-      doc.font("Helvetica").fontSize(10).text("Every subject, regardless of level, followed by three mark columns:");
+      doc.font("Helvetica").fontSize(10).text("Scored subjects use the mark columns described below; grade-only subjects use a teacher-entered grade:");
       doc.moveDown(0.5);
       doc.list([
         "Main Branch Pre-Primary: Half Yearly (Max 40) + Subject Enrichment (Max 10) = 50 per scored subject. A2 is 40–45 marks. Periodic Test 1 is not included.",
-        "Other levels in Main Branch and Nipania: Periodic Test 1 (entered out of 20 and shown out of 10), Enrichment (Max 10), and Half Yearly (Max 80) = 100 per scored subject.",
+        "Main Branch Middle: Computer + G.K. is grade-only; enter its grade in the report form or CSV Grade column. Its marks are excluded from totals.",
+        "Primary and other scored subjects in Main Branch and Nipania: Periodic Test 1 (entered out of 20 and shown out of 10), Enrichment (Max 10), and Half Yearly (Max 80) = 100 per scored subject.",
+        "Main Branch Middle accepts Ab for an absent exam mark. It displays as Ab and contributes 0 to totals.",
         "Branch 2 uses its separate Quarterly Examination (Max 50) criteria."
       ], { bulletRadius: 2, textIndent: 15 });
       doc.moveDown(0.5);

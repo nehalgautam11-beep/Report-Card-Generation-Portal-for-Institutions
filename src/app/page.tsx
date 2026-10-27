@@ -22,11 +22,33 @@ const GRADE_ONLY_SUBJECTS: Partial<Record<ReportLevel, string>> = {
   "primary": "Computer + G.K.",
 };
 
-const isGradeOnlySubject = (level: ReportLevel, subject: string): boolean =>
+const isGradeOnlySubject = (branch: Branch | null, level: ReportLevel, subject: string): boolean =>
+  (branch === "branch1" && level === "middle" && subject === "Computer + G.K.") ||
   GRADE_ONLY_SUBJECTS[level] === subject;
 
 const usesMainPrePrimaryCriteria = (branch: Branch | null, level: ReportLevel): boolean =>
   branch === "branch1" && level === "pre-primary";
+
+const usesMainMiddleCriteria = (branch: Branch | null, level: ReportLevel): boolean =>
+  branch === "branch1" && level === "middle";
+
+const parseMiddleMark = (value: unknown, allowAbsent: boolean): number | "Ab" => {
+  if (allowAbsent && String(value ?? "").trim().toUpperCase() === "AB") return "Ab";
+  return Number.parseInt(String(value ?? "0"), 10) || 0;
+};
+
+const isValidMiddleMark = (value: unknown, max: number, allowAbsent: boolean): boolean => {
+  if (allowAbsent && String(value ?? "").trim().toUpperCase() === "AB") return true;
+  const text = String(value ?? "").trim();
+  if (!text) return false;
+  const score = Number(text);
+  return Number.isInteger(score) && score >= 0 && score <= max;
+};
+
+const middleMarkForPayload = (value: unknown, allowAbsent: boolean): number | "Ab" =>
+  allowAbsent && String(value ?? "").trim().toUpperCase() === "AB"
+    ? "Ab"
+    : Number(value) || 0;
 
 const normalizeCsvHeader = (header: string): string =>
   header.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -141,6 +163,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const mainPrePrimaryCriteria = usesMainPrePrimaryCriteria(selectedBranch, reportLevel ?? "primary");
+  const mainMiddleCriteria = usesMainMiddleCriteria(selectedBranch, reportLevel ?? "primary");
 
   // Manual Form State - Dynamic based on subjects
   const [manualData, setManualData] = useState<any>({
@@ -154,7 +177,7 @@ export default function Home() {
         name: "", fatherName: "", motherName: "", className: "", dob: "", qualities: "", workingDays: 200, attendedDays: 0,
       };
       getLevelSubjects(selectedBranch, reportLevel).forEach(sub => {
-        if (isGradeOnlySubject(reportLevel, sub)) {
+        if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
           initialMarks[`${sub}_P`] = "-";
           initialMarks[`${sub}_E`] = "-";
           initialMarks[`${sub}_T`] = "-";
@@ -214,12 +237,15 @@ export default function Home() {
       complete: (results) => {
         try {
           const subjects = getLevelSubjects(selectedBranch, reportLevel);
+          const readMark = (value: unknown) => mainMiddleCriteria
+            ? parseMiddleMark(value, true)
+            : Number.parseInt(String(value ?? "0"), 10) || 0;
           let missingGrade: string | null = null;
           let invalidMarks: string | null = null;
           let missingHalfYearlyColumn: string | null = null;
           const parsedStudents = results.data.map((row: any, rowIndex: number) => {
             const studentSubjects = subjects.map(sub => {
-              if (isGradeOnlySubject(reportLevel, sub)) {
+              if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
                 const grade = String(row[`${sub} Grade`] ?? "").trim().toUpperCase();
                 if (!grade && !missingGrade) {
                   missingGrade = `Row ${rowIndex + 2}: ${sub} Grade is required.`;
@@ -247,20 +273,23 @@ export default function Home() {
                 };
               }
 
-              const enrichment = parseInt(row[`${sub} Enrichment (10)`] || row[`${sub} Enrichment`] || "0", 10) || 0;
+              const enrichment = readMark(row[`${sub} Enrichment (10)`] || row[`${sub} Enrichment`] || "0");
               const halfYearlyCell = getHalfYearlyCsvCell(row, sub, mainPrePrimaryCriteria ? 40 : 80);
               if (!halfYearlyCell.found && !missingHalfYearlyColumn) {
                 missingHalfYearlyColumn = `${sub} Half Yearly`;
               }
-              const halfYearly = parseInt(String(halfYearlyCell.value ?? "0"), 10) || 0;
-              if (mainPrePrimaryCriteria && (enrichment < 0 || enrichment > 10 || halfYearly < 0 || halfYearly > 40) && !invalidMarks) {
+              const halfYearly = readMark(halfYearlyCell.value);
+              if (mainPrePrimaryCriteria && (
+                typeof enrichment !== "number" || enrichment < 0 || enrichment > 10 ||
+                typeof halfYearly !== "number" || halfYearly < 0 || halfYearly > 40
+              ) && !invalidMarks) {
                 invalidMarks = `Row ${rowIndex + 2}: ${sub} must have Half Yearly marks from 0 to 40 and Subject Enrichment marks from 0 to 10.`;
               }
 
               return {
                 name: sub,
                 marks: {
-                  periodicRaw: mainPrePrimaryCriteria ? 0 : parseInt(row[`${sub} Periodic Test 1`] || row[`${sub} Periodic`] || "0", 10) || 0,
+                  periodicRaw: mainPrePrimaryCriteria ? 0 : readMark(row[`${sub} Periodic Test 1`] || row[`${sub} Periodic`] || "0"),
                   enrichment,
                   term2: halfYearly
                 }
@@ -314,7 +343,7 @@ export default function Home() {
     // Validate Marks
     const subjects = getLevelSubjects(selectedBranch, reportLevel);
     for (const sub of subjects) {
-      if (isGradeOnlySubject(reportLevel, sub)) {
+      if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
         const grade = String(manualData[`${sub}_G`] ?? "").trim();
         if (!grade) return setError(`${sub.toUpperCase()} Grade is required.`);
         continue;
@@ -327,10 +356,16 @@ export default function Home() {
         const p = manualData[`${sub}_P`];
         const e = manualData[`${sub}_E`];
         const t = manualData[`${sub}_T`];
-        if (!mainPrePrimaryCriteria && (isNaN(p) || p < 0 || p > 20)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20.`);
-        if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
-        const halfYearlyMax = mainPrePrimaryCriteria ? 40 : 80;
-        if (isNaN(t) || t < 0 || t > halfYearlyMax) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and ${halfYearlyMax}.`);
+        if (mainMiddleCriteria) {
+          if (!isValidMiddleMark(p, 20, true)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20, or Ab.`);
+          if (!isValidMiddleMark(e, 10, true)) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10, or Ab.`);
+          if (!isValidMiddleMark(t, 80, true)) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and 80, or Ab.`);
+        } else {
+          if (!mainPrePrimaryCriteria && (isNaN(p) || p < 0 || p > 20)) return setError(`${sub.toUpperCase()} Periodic Test 1 must be between 0 and 20.`);
+          if (isNaN(e) || e < 0 || e > 10) return setError(`${sub.toUpperCase()} Enrichment must be between 0 and 10.`);
+          const halfYearlyMax = mainPrePrimaryCriteria ? 40 : 80;
+          if (isNaN(t) || t < 0 || t > halfYearlyMax) return setError(`${sub.toUpperCase()} Half Yearly marks must be between 0 and ${halfYearlyMax}.`);
+        }
       }
     }
 
@@ -353,7 +388,7 @@ export default function Home() {
         attendedDays: Number(manualData.attendedDays) || 0,
       } : {}),
       subjects: subjects.map(sub => {
-        if (isGradeOnlySubject(reportLevel, sub)) {
+        if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
           return {
             name: sub,
             manualGrade: String(manualData[`${sub}_G`] ?? "").trim().toUpperCase(),
@@ -374,9 +409,9 @@ export default function Home() {
         return {
           name: sub,
           marks: {
-            periodicRaw: Number(manualData[`${sub}_P`]) || 0,
-            enrichment: Number(manualData[`${sub}_E`]) || 0,
-            term2: Number(manualData[`${sub}_T`]) || 0
+            periodicRaw: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_P`], true) : Number(manualData[`${sub}_P`]) || 0,
+            enrichment: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_E`], true) : Number(manualData[`${sub}_E`]) || 0,
+            term2: mainMiddleCriteria ? middleMarkForPayload(manualData[`${sub}_T`], true) : Number(manualData[`${sub}_T`]) || 0
           }
         };
       })
@@ -396,7 +431,7 @@ export default function Home() {
       dob: st.dob, qualities: st.qualities, workingDays: st.workingDays, attendedDays: st.attendedDays,
     };
     st.subjects.forEach((sub: any) => {
-      if (isGradeOnlySubject(reportLevel, sub.name)) {
+      if (isGradeOnlySubject(selectedBranch, reportLevel, sub.name)) {
         editData[`${sub.name}_P`] = "-";
         editData[`${sub.name}_E`] = "-";
         editData[`${sub.name}_T`] = "-";
@@ -469,7 +504,7 @@ export default function Home() {
     if (selectedBranch === "branch2") {
       headers.push("Working Days", "Attended Days", "Remarks Qualities");
       subjects.forEach(sub => {
-        if (isGradeOnlySubject(reportLevel, sub)) {
+        if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
           headers.push(`${sub} Grade`);
         } else {
           headers.push(`${sub} Quarterly`);
@@ -479,7 +514,7 @@ export default function Home() {
         "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "200", "190", "Curious, helpful, disciplined",
       ];
       subjects.forEach(sub => {
-        sample.push(isGradeOnlySubject(reportLevel, sub) ? "A1" : "42");
+        sample.push(isGradeOnlySubject(selectedBranch, reportLevel, sub) ? "A1" : "42");
       });
       const csvContent = headers.join(",") + "\n" + sample.join(",");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -493,7 +528,7 @@ export default function Home() {
     } else {
       headers.push("Remarks Qualities");
       subjects.forEach(sub => {
-        if (isGradeOnlySubject(reportLevel, sub)) {
+        if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
           headers.push(`${sub} Grade`);
         } else if (mainPrePrimaryCriteria) {
           headers.push(`${sub} Half Yearly (40)`, `${sub} Enrichment (10)`);
@@ -506,7 +541,7 @@ export default function Home() {
         "Junior KG", "Child Name", "Father Name", "Mother Name", "01/01/2019", "Curious, helpful, disciplined",
       ];
       subjects.forEach(sub => {
-        if (isGradeOnlySubject(reportLevel, sub)) {
+        if (isGradeOnlySubject(selectedBranch, reportLevel, sub)) {
           sample.push("A1");
         } else if (mainPrePrimaryCriteria) {
           sample.push("40", "0");
@@ -653,7 +688,7 @@ export default function Home() {
               <p style={{color: 'var(--text-muted)'}}>
                 {students.length > 0 
                   ? <span style={{color: 'var(--accent-color)', fontWeight: 600}}>✅ {students.length} Student(s) loaded.</span> 
-                  : `Select or drop your ${reportLevel} CSV to begin batch process.`}
+                  : `Select or drop your ${reportLevel} CSV to begin batch process.${mainMiddleCriteria ? " Use the Computer + G.K. Grade column and enter Ab for absent exam marks; Ab counts as 0." : ""}`}
               </p>
             </div>
             <div style={{textAlign: 'center'}}>
@@ -679,10 +714,12 @@ export default function Home() {
             </div>
 
             <h3 className="section-title">Academic Metrics ({getLevelSubjects(selectedBranch, reportLevel).length} Subjects)</h3>
-            {(reportLevel === "pre-primary" || reportLevel === "primary") && (
+            {(reportLevel === "pre-primary" || reportLevel === "primary" || mainMiddleCriteria) && (
               <div className="alert" style={{marginBottom: "20px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8"}}>
-                {mainPrePrimaryCriteria
-                  ? "Pre-Primary scoring: Half Yearly is out of 40 and Subject Enrichment is out of 10 (50 total per scored subject). A2 is 40–45."
+                {mainMiddleCriteria
+                  ? "Middle Wing: Computer + G.K. is grade-only. Enter the teacher's grade manually or in the CSV Grade column. For scored subjects, enter Ab for an absent exam; it displays as Ab and counts as 0."
+                  : mainPrePrimaryCriteria
+                    ? "Pre-Primary scoring: Half Yearly is out of 40 and Subject Enrichment is out of 10 (50 total per scored subject). A2 is 40–45."
                   : reportLevel === "pre-primary"
                     ? "Drawing + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."
                     : "Computer + G.K. is grade-only in manual entry. It will show as dashes in marks columns and will be excluded from overall totals."}
@@ -691,7 +728,7 @@ export default function Home() {
             {getLevelSubjects(selectedBranch, reportLevel).map((sub) => (
               <div className="subject-row" style={{display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center'}} key={sub}>
                 <div className="subject-name" style={{flex: '1.5', minWidth: '100px'}}>{sub}</div>
-                {isGradeOnlySubject(reportLevel, sub) ? (
+                {isGradeOnlySubject(selectedBranch, reportLevel, sub) ? (
                   <>
                     {selectedBranch === "branch2" ? (
                       <div style={{flex: '1', minWidth: '120px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Exam</label><input type="text" className="form-control" value="-" readOnly disabled /></div>
@@ -708,10 +745,10 @@ export default function Home() {
                   <div style={{flex: '2', minWidth: '150px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Quarterly Examination (Out of 50)</label><input type="number" min="0" max="50" className="form-control" value={manualData[`${sub}_Q50`] || 0} onChange={e => setManualData({...manualData, [`${sub}_Q50`]: parseInt(e.target.value)})} /></div>
                 ) : (
                   <>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20)</label><input type="number" min="0" max="20" className="form-control" value={manualData[`${sub}_P`] || 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: parseInt(e.target.value)})} /></div>}
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Periodic Test 1 (20{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 20} className="form-control" value={manualData[`${sub}_P`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_P`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>}
                     {mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (40)</label><input type="number" min="0" max="40" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>}
-                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10)</label><input type="number" min="0" max="10" className="form-control" value={manualData[`${sub}_E`] || 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: parseInt(e.target.value)})} /></div>
-                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80)</label><input type="number" min="0" max="80" className="form-control" value={manualData[`${sub}_T`] || 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: parseInt(e.target.value)})} /></div>}
+                    <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject Enrichment (10{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 10} className="form-control" value={manualData[`${sub}_E`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_E`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>
+                    {!mainPrePrimaryCriteria && <div style={{flex: '1', minWidth: '80px'}}><label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Half Yearly (80{mainMiddleCriteria ? '; enter Ab if absent' : ''})</label><input type={mainMiddleCriteria ? "text" : "number"} min={mainMiddleCriteria ? undefined : 0} max={mainMiddleCriteria ? undefined : 80} className="form-control" value={manualData[`${sub}_T`] ?? 0} onChange={e => setManualData({...manualData, [`${sub}_T`]: mainMiddleCriteria ? e.target.value : parseInt(e.target.value)})} /></div>}
                   </>
                 )}
               </div>

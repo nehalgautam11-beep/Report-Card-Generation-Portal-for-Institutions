@@ -49,7 +49,13 @@ export async function POST(req: NextRequest) {
       student.remarks = remark || "Excellent performance and behavior. Keep up the good work!";
 
       // 2. Generate PDF
-      const pdfBuffer = await generateReportCardPDF(student, logoBuffer, reportLevel, branch === "branch1");
+      const pdfBuffer = await generateReportCardPDF(
+        student,
+        logoBuffer,
+        reportLevel,
+        branch === "branch1",
+        branch === "branch1" && reportLevel === "middle"
+      );
 
       // 3. Add to ZIP
       const filename = `${student.name.replace(/\s+/g, '_')}_ReportCard.pdf`;

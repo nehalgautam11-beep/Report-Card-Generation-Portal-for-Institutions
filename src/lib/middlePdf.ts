@@ -3,14 +3,16 @@ import fs from "fs";
 import path from "path";
 
 export interface SubjectMarks {
-  periodicRaw: number;
-  enrichment: number;
-  term2: number;
+  periodicRaw: number | string;
+  enrichment: number | string;
+  term2: number | string;
 }
 
 export interface SubjectEntry {
   name: string;
   marks: SubjectMarks;
+  manualGrade?: string;
+  excludeFromTotals?: boolean;
 }
 
 export interface StudentData {
@@ -68,7 +70,8 @@ const getLayoutConfig = (reportLevel?: ReportLevel) => {
 export const generateReportCardPDF = (
   data: StudentData,
   logoBuffer?: Buffer,
-  reportLevel?: ReportLevel
+  reportLevel?: ReportLevel,
+  mainMiddleGradeOnly = false
 ): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     try {
@@ -197,15 +200,23 @@ export const generateReportCardPDF = (
       const dataRowH = 30;
 
       data.subjects.forEach(st => {
-        const pRaw = Number(st.marks.periodicRaw) || 0;
+        const isGradeOnlySubject = mainMiddleGradeOnly && (st.excludeFromTotals || Boolean(st.manualGrade));
+        const isAbsent = (value: number | string) => typeof value === "string" && value.trim().toUpperCase() === "AB";
+        const markToNumber = (value: number | string) => isAbsent(value) ? 0 : Number(value) || 0;
+        const displayMark = (value: number | string, scaledValue?: number) =>
+          isAbsent(value) ? "Ab" : String(scaledValue ?? markToNumber(value));
+        const pRaw = markToNumber(st.marks.periodicRaw);
         const p = Math.round(pRaw / 2);
-        const e = Number(st.marks.enrichment) || 0;
-        const t = Number(st.marks.term2) || 0;
+        const e = markToNumber(st.marks.enrichment);
+        const t = markToNumber(st.marks.term2);
         const sum = p + e + t;
+        const hasAbsentMark = isAbsent(st.marks.periodicRaw) || isAbsent(st.marks.enrichment) || isAbsent(st.marks.term2);
         
         // Calculate the individual row's grade
-        const rowGrade = getGrade((sum / 100) * 100); 
-        totalAccumulated += sum;
+        const rowGrade = isGradeOnlySubject
+          ? (st.manualGrade || "-")
+          : getGrade((sum / 100) * 100);
+        if (!isGradeOnlySubject) totalAccumulated += sum;
 
         doc.rect(c1, curY, tableW, dataRowH).strokeColor(BORDER_BLUE).stroke();
         doc.moveTo(c2, curY).lineTo(c2, curY + dataRowH).stroke();
@@ -217,12 +228,18 @@ export const generateReportCardPDF = (
         doc.font("Helvetica-Bold").fontSize(12).fillColor(BLACK).text(st.name, c1 + 5, curY + 10);
 
         doc.font("Helvetica").fontSize(12);
-        if (pRaw !== 0 || e !== 0 || t !== 0) {
-          doc.text(p.toString(), c2 + 5, curY + 10);
-          doc.text(e.toString(), c3 + 5, curY + 10);
-          doc.text(t.toString(), c4 + 5, curY + 10);
+        if (isGradeOnlySubject) {
+          doc.text("-", c2 + 5, curY + 10);
+          doc.text("-", c3 + 5, curY + 10);
+          doc.text("-", c4 + 5, curY + 10);
+          doc.text("-", c5 + 5, curY + 10);
+          doc.text(rowGrade, c6 + 5, curY + 10);
+        } else if (pRaw !== 0 || e !== 0 || t !== 0 || hasAbsentMark) {
+          doc.text(displayMark(st.marks.periodicRaw, p), c2 + 5, curY + 10);
+          doc.text(displayMark(st.marks.enrichment), c3 + 5, curY + 10);
+          doc.text(displayMark(st.marks.term2), c4 + 5, curY + 10);
           doc.text(sum.toString(), c5 + 5, curY + 10);
-          doc.text(rowGrade, c6 + 5, curY + 10); // Print the grade
+          doc.text(rowGrade, c6 + 5, curY + 10);
         }
         curY += dataRowH;
       });
@@ -230,13 +247,16 @@ export const generateReportCardPDF = (
       curY += 25;
 
       // 6. STATS & ATTENDANCE 
-      const totalPossible = data.subjects.length * 100;
+      const totalPossible = data.subjects.reduce(
+        (total, subject) => total + (mainMiddleGradeOnly && (subject.excludeFromTotals || subject.manualGrade) ? 0 : 100),
+        0
+      );
       const finalPercentage = totalPossible > 0 ? (totalAccumulated / totalPossible) * 100 : 0;
       const finalGrade = getGrade(finalPercentage);
       const statX = MARGIN_X;
       const drawStat = (label: string, value: string, yPos: number) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(label, statX, yPos);
-        if (totalAccumulated > 0) {
+        if (totalPossible > 0) {
           doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_BLUE).text(value, statX + 130, yPos);
         }
         doc.moveTo(statX + 120, yPos + 13).lineTo(statX + 235, yPos + 13).strokeColor(BORDER_BLUE).stroke();
